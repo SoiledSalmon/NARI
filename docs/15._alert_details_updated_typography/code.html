@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NARI - Alert Detail</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&amp;family=Nunito+Sans:wght@400;700&amp;family=DM+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-tertiary-fixed": "#2f1316",
+                        "on-secondary-fixed-variant": "#1b4e4f",
+                        "tertiary-fixed-dim": "#ebbabd",
+                        "error": "#ba1a1a",
+                        "surface-bright": "#fcf9f2",
+                        "inverse-on-surface": "#f3f0ea",
+                        "surface-dim": "#dcdad3",
+                        "surface": "#fcf9f2",
+                        "primary-fixed-dim": "#afd0a1",
+                        "on-secondary": "#ffffff",
+                        "surface-container": "#f0eee7",
+                        "surface-variant": "#e5e2db",
+                        "on-background": "#1c1c18",
+                        "primary": "#334f2b",
+                        "on-tertiary": "#ffffff",
+                        "surface-container-low": "#f6f3ec",
+                        "surface-tint": "#496640",
+                        "secondary-container": "#baeced",
+                        "surface-container-highest": "#e5e2db",
+                        "inverse-primary": "#afd0a1",
+                        "background": "#fcf9f2",
+                        "on-secondary-container": "#3c6c6d",
+                        "tertiary": "#613e41",
+                        "on-surface-variant": "#434840",
+                        "on-error": "#ffffff",
+                        "primary-container": "#4a6741",
+                        "outline-variant": "#c3c8bd",
+                        "on-surface": "#1c1c18",
+                        "secondary-fixed-dim": "#9ecfd0",
+                        "on-primary-fixed": "#062104",
+                        "tertiary-container": "#7b5558",
+                        "inverse-surface": "#31312c",
+                        "outline": "#73796f",
+                        "surface-container-lowest": "#ffffff",
+                        "on-tertiary-fixed-variant": "#603d40",
+                        "tertiary-fixed": "#ffdadb",
+                        "on-tertiary-container": "#ffced1",
+                        "on-primary-fixed-variant": "#324e2a",
+                        "on-primary-container": "#c2e4b4",
+                        "secondary-fixed": "#baeced",
+                        "surface-container-high": "#ebe8e1",
+                        "error-container": "#ffdad6",
+                        "primary-fixed": "#caecbc",
+                        "on-secondary-fixed": "#002021",
+                        "on-error-container": "#93000a",
+                        "secondary": "#366667",
+                        "on-primary": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "margin-mobile": "20px",
+                        "sm": "8px",
+                        "md": "16px",
+                        "xs": "4px",
+                        "margin-desktop": "64px",
+                        "lg": "24px",
+                        "unit": "4px",
+                        "gutter": "16px",
+                        "xl": "40px"
+                    },
+                    "fontFamily": {
+                        "headline-lg": ["Nunito", "sans-serif"],
+                        "body-md": ["Nunito Sans", "sans-serif"],
+                        "headline-md": ["Nunito", "sans-serif"],
+                        "status-display": ["Nunito", "sans-serif"],
+                        "label-caps": ["Nunito Sans", "sans-serif"],
+                        "technical-sm": ["DM Mono", "monospace"],
+                        "body-lg": ["Nunito Sans", "sans-serif"]
+                    },
+                    "fontSize": {
+                        "headline-lg": ["32px", { "lineHeight": "40px", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "status-display": ["40px", { "lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.1em", "fontWeight": "700" }],
+                        "technical-sm": ["13px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style type="text/tailwindcss">
+        @layer utilities {
+            .glass-panel {
+                @apply bg-surface/80 backdrop-blur-xl border border-white dark:border-white/10;
+            }
+            .soft-shadow {
+                @apply shadow-[0_10px_30px_-5px_rgba(74,103,65,0.15)];
+            }
+            .alert-shadow {
+                @apply shadow-[0_10px_30px_-5px_rgba(186,26,26,0.15)];
+            }
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-background text-on-background min-h-screen font-body-md antialiased pb-24 md:pb-0 pt-16">
+<!-- TopAppBar -->
+<header class="fixed top-0 left-0 w-full z-40 glass-panel border-b border-outline-variant/30 shadow-sm px-margin-mobile h-16 flex justify-between items-center max-w-7xl mx-auto">
+<div class="flex items-center gap-4">
+<button class="text-on-surface hover:bg-surface-container-low transition-colors rounded-full p-2 flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="arrow_back">arrow_back</span>
+</button>
+<h1 class="font-headline-lg text-headline-lg font-bold tracking-tighter text-on-surface">Alert Details</h1>
+</div>
+<button class="text-on-surface hover:bg-surface-container-low transition-colors rounded-full p-2 flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="more_vert">more_vert</span>
+</button>
+</header>
+<!-- Main Content Canvas -->
+<main class="max-w-3xl mx-auto px-margin-mobile pt-lg pb-xl flex flex-col gap-lg">
+<!-- Summary Header Card -->
+<section class="bg-error-container text-on-error-container rounded-[20px] p-lg alert-shadow relative overflow-hidden">
+<div class="absolute top-0 right-0 p-4 opacity-20">
+<span class="material-symbols-outlined text-[120px]" data-icon="warning">warning</span>
+</div>
+<div class="relative z-10 flex flex-col gap-md">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-error" data-icon="error" data-weight="fill">error</span>
+<span class="font-label-caps text-label-caps text-error">Resolved Event</span>
+</div>
+<h2 class="font-headline-lg text-headline-lg text-on-error-container">Unusual Heart Rate Detected</h2>
+<p class="font-body-lg text-body-lg text-on-error-container/80">
+                    Your Nari device detected a sustained elevated heart rate while you were stationary. An automated check-in was initiated. You marked yourself as "Safe" within 45 seconds.
+                </p>
+<div class="flex items-center gap-xs text-on-error-container/70 mt-sm">
+<span class="material-symbols-outlined text-sm" data-icon="schedule">schedule</span>
+<span class="font-technical-sm text-technical-sm">Oct 24, 2023 - 14:32:05 PST</span>
+</div>
+</div>
+</section>
+<!-- Context Map / Location -->
+<section class="bg-surface-container-low rounded-[20px] overflow-hidden soft-shadow border border-outline-variant/20">
+<div class="h-48 w-full bg-surface-variant relative">
+<!-- Map Placeholder -->
+<img alt="Map view" class="w-full h-full object-cover opacity-80 mix-blend-multiply" data-alt="A clean, minimalist street map view focused on a specific urban location. The map uses a light-mode color palette with soft greys, muted warm beige tones, and subtle sage green accents for parks. The overall style is modern, simplified, and easy to read, fitting perfectly within a sophisticated, calm user interface." data-location="Seattle" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAm6ZfMRD5fbCteAjwKk5g6f0rw0DZYFAkLXlYWJq8qtguIfSwhlWqlL-VJ1SwOyvzmzUlFLYcCzp61X9VNCLFxuxExQh9uj4jzac4w8HTuRxRguKWdkgnwMB_VfP6r8yxNDvuEjqHcUOz1OP4K9vLSaWskkd2pF__50X7K1CHFUAnXhC-Fposegv1H8LkkLHhN18uOPQFHSHT_8QGHaoD3qOsbCoqCrxqkRUUb9YyZZh0QXIpZNqajEtmQMKzfkxSegblcvK5XztkI"/>
+<!-- Pin marker -->
+<div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
+<div class="w-12 h-12 rounded-full bg-error/20 flex items-center justify-center animate-pulse">
+<div class="w-4 h-4 rounded-full bg-error border-2 border-surface"></div>
+</div>
+</div>
+</div>
+<div class="p-md flex items-start gap-md">
+<div class="bg-surface p-2 rounded-full mt-1">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="location_on">location_on</span>
+</div>
+<div>
+<h3 class="font-headline-md text-headline-md text-on-surface">Volunteer Park</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">1247 15th Ave E, Seattle, WA</p>
+</div>
+</div>
+</section>
+<!-- Technical Details Accordion -->
+<details class="group bg-surface-container-lowest rounded-[20px] soft-shadow border border-outline-variant/30 [&amp;_summary::-webkit-details-marker]:hidden">
+<summary class="flex justify-between items-center p-lg cursor-pointer hover:bg-surface-container-low transition-colors rounded-[20px]">
+<div class="flex items-center gap-sm text-on-surface">
+<span class="material-symbols-outlined" data-icon="analytics">analytics</span>
+<span class="font-headline-md text-headline-md text-lg">Technical Sensor Data</span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant transition-transform duration-300 group-open:rotate-180" data-icon="expand_more">expand_more</span>
+</summary>
+<div class="p-lg pt-0 border-t border-outline-variant/10 mt-2">
+<p class="font-body-md text-body-md text-on-surface-variant mb-md pt-md">Raw telemetry data captured 10 seconds prior to alert generation.</p>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-sm">
+<!-- Sensor Block -->
+<div class="bg-surface-container p-md rounded-xl flex justify-between items-center">
+<div class="flex items-center gap-xs text-on-surface-variant">
+<span class="material-symbols-outlined text-sm" data-icon="favorite">favorite</span>
+<span class="font-label-caps text-label-caps">Heart Rate</span>
+</div>
+<span class="font-technical-sm text-technical-sm text-error font-bold">142 BPM</span>
+</div>
+<div class="bg-surface-container p-md rounded-xl flex justify-between items-center">
+<div class="flex items-center gap-xs text-on-surface-variant">
+<span class="material-symbols-outlined text-sm" data-icon="directions_walk">directions_walk</span>
+<span class="font-label-caps text-label-caps">Accelerometer</span>
+</div>
+<span class="font-technical-sm text-technical-sm text-on-surface">0.02g (Stationary)</span>
+</div>
+<div class="bg-surface-container p-md rounded-xl flex justify-between items-center">
+<div class="flex items-center gap-xs text-on-surface-variant">
+<span class="material-symbols-outlined text-sm" data-icon="device_thermostat">device_thermostat</span>
+<span class="font-label-caps text-label-caps">Skin Temp</span>
+</div>
+<span class="font-technical-sm text-technical-sm text-on-surface">98.2°F</span>
+</div>
+<div class="bg-surface-container p-md rounded-xl flex justify-between items-center">
+<div class="flex items-center gap-xs text-on-surface-variant">
+<span class="material-symbols-outlined text-sm" data-icon="battery_charging_full">battery_charging_full</span>
+<span class="font-label-caps text-label-caps">Device Battery</span>
+</div>
+<span class="font-technical-sm text-technical-sm text-on-surface">84%</span>
+</div>
+</div>
+<div class="mt-md bg-inverse-surface p-md rounded-xl overflow-x-auto">
+<pre class="font-technical-sm text-technical-sm text-inverse-on-surface text-xs leading-relaxed">{
+  "timestamp": "1698183125",
+  "event_type": "HR_ANOMALY_STATIONARY",
+  "confidence_score": 0.94,
+  "trigger_source": "VITAL_SENSE_V2",
+  "connection_status": "SECURE_LTE",
+  "gps_accuracy": "4m"
+}
+                    </pre>
+</div>
+</div>
+</details>
+<!-- Actions -->
+<div class="flex gap-md pt-sm">
+<button class="flex-1 bg-surface-container-highest text-on-surface font-headline-md text-body-md font-bold py-4 rounded-full hover:bg-outline-variant/30 transition-colors">
+                Delete Record
+            </button>
+<button class="flex-1 bg-primary text-on-primary font-headline-md text-body-md font-bold py-4 rounded-full hover:bg-primary-container hover:text-on-primary-container transition-colors soft-shadow">
+                Share Report
+            </button>
+</div>
+</main>
+</body></html>

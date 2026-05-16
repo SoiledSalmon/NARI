@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SOS Active</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700&amp;family=Nunito+Sans:wght@400;600;700&amp;family=DM+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-tertiary-fixed": "#2f1316",
+                        "on-secondary-fixed-variant": "#1b4e4f",
+                        "tertiary-fixed-dim": "#ebbabd",
+                        "error": "#ba1a1a",
+                        "surface-bright": "#fcf9f2",
+                        "inverse-on-surface": "#f3f0ea",
+                        "surface-dim": "#dcdad3",
+                        "surface": "#fcf9f2",
+                        "primary-fixed-dim": "#afd0a1",
+                        "on-secondary": "#ffffff",
+                        "surface-container": "#f0eee7",
+                        "surface-variant": "#e5e2db",
+                        "on-background": "#1c1c18",
+                        "primary": "#334f2b",
+                        "on-tertiary": "#ffffff",
+                        "surface-container-low": "#f6f3ec",
+                        "surface-tint": "#496640",
+                        "secondary-container": "#baeced",
+                        "surface-container-highest": "#e5e2db",
+                        "inverse-primary": "#afd0a1",
+                        "background": "#fcf9f2",
+                        "on-secondary-container": "#3c6c6d",
+                        "tertiary": "#613e41",
+                        "on-surface-variant": "#434840",
+                        "on-error": "#ffffff",
+                        "primary-container": "#4a6741",
+                        "outline-variant": "#c3c8bd",
+                        "on-surface": "#1c1c18",
+                        "secondary-fixed-dim": "#9ecfd0",
+                        "on-primary-fixed": "#062104",
+                        "tertiary-container": "#7b5558",
+                        "inverse-surface": "#31312c",
+                        "outline": "#73796f",
+                        "surface-container-lowest": "#ffffff",
+                        "on-tertiary-fixed-variant": "#603d40",
+                        "tertiary-fixed": "#ffdadb",
+                        "on-tertiary-container": "#ffced1",
+                        "on-primary-fixed-variant": "#324e2a",
+                        "on-primary-container": "#c2e4b4",
+                        "secondary-fixed": "#baeced",
+                        "surface-container-high": "#ebe8e1",
+                        "error-container": "#ffdad6",
+                        "primary-fixed": "#caecbc",
+                        "on-secondary-fixed": "#002021",
+                        "on-error-container": "#93000a",
+                        "secondary": "#366667",
+                        "on-primary": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "margin-mobile": "20px",
+                        "sm": "8px",
+                        "md": "16px",
+                        "xs": "4px",
+                        "margin-desktop": "64px",
+                        "lg": "24px",
+                        "unit": "4px",
+                        "gutter": "16px",
+                        "xl": "40px"
+                    },
+                    "fontFamily": {
+                        "headline-lg": ["Nunito", "sans-serif"],
+                        "body-md": ["Nunito Sans", "sans-serif"],
+                        "headline-md": ["Nunito", "sans-serif"],
+                        "status-display": ["Nunito", "sans-serif"],
+                        "label-caps": ["Nunito", "sans-serif"],
+                        "technical-sm": ["DM Mono", "monospace"],
+                        "body-lg": ["Nunito Sans", "sans-serif"]
+                    },
+                    "fontSize": {
+                        "headline-lg": ["32px", { "lineHeight": "40px", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "status-display": ["40px", { "lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.1em", "fontWeight": "700" }],
+                        "technical-sm": ["13px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .pulse-ring {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            background: rgba(186, 26, 26, 0.2);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-error text-on-error min-h-screen flex flex-col font-body-md overflow-hidden antialiased">
+<!-- Main Content Canvas -->
+<main class="flex-grow flex flex-col relative z-10 px-margin-mobile pt-xl pb-margin-mobile items-center justify-between">
+<!-- Header -->
+<div class="w-full max-w-lg mx-auto text-center pt-8">
+<h1 class="font-status-display text-status-display text-on-error mb-2 tracking-tight">SOS Active</h1>
+<p class="font-body-lg text-body-lg text-error-container">Help is on the way. Stay calm.</p>
+</div>
+<!-- Pulsing Visualization Area -->
+<div class="relative w-full max-w-sm aspect-square flex items-center justify-center my-8">
+<!-- Simulated Pulsing Rings -->
+<div class="pulse-ring w-full h-full opacity-30 shadow-[0_0_60px_rgba(186,26,26,0.5)]"></div>
+<div class="pulse-ring w-3/4 h-3/4 opacity-50 shadow-[0_0_40px_rgba(186,26,26,0.6)]"></div>
+<div class="pulse-ring w-1/2 h-1/2 opacity-70 shadow-[0_0_20px_rgba(186,26,26,0.8)]"></div>
+<!-- Central Location Dot / Icon -->
+<div class="relative z-10 bg-on-error rounded-full p-6 shadow-xl flex items-center justify-center">
+<span class="material-symbols-outlined text-error text-[48px]" style="font-variation-settings: 'FILL' 1;">my_location</span>
+</div>
+<!-- Technical Readout Overlay -->
+<div class="absolute bottom-0 left-1/2 transform -translate-x-1/2 bg-on-error/10 backdrop-blur-md rounded-full px-4 py-2 border border-on-error/20 flex items-center gap-2">
+<span class="material-symbols-outlined text-on-error text-[16px]">satellite_alt</span>
+<span class="font-technical-sm text-technical-sm text-on-error">LOCATING...</span>
+</div>
+</div>
+<!-- Notification Checklist -->
+<div class="w-full max-w-lg mx-auto bg-on-error/10 backdrop-blur-xl rounded-xl p-6 border border-on-error/20 mb-8 shadow-lg">
+<h2 class="font-label-caps text-label-caps text-error-container uppercase mb-4 opacity-80">Notifying Contacts</h2>
+<ul class="space-y-4">
+<li class="flex items-center gap-3">
+<div class="w-6 h-6 rounded-full bg-on-error flex items-center justify-center flex-shrink-0">
+<span class="material-symbols-outlined text-error text-[14px]" style="font-variation-settings: 'FILL' 1;">check</span>
+</div>
+<span class="font-body-md text-body-md text-on-error flex-grow">Emergency Contacts (3)</span>
+<span class="font-technical-sm text-technical-sm text-error-container opacity-80">SENT</span>
+</li>
+<li class="flex items-center gap-3">
+<div class="w-6 h-6 rounded-full bg-on-error/30 flex items-center justify-center flex-shrink-0 border border-on-error/50">
+<span class="material-symbols-outlined text-on-error text-[14px]">sync</span>
+</div>
+<span class="font-body-md text-body-md text-on-error flex-grow">Local Authorities</span>
+<span class="font-technical-sm text-technical-sm text-error-container opacity-80">SENDING...</span>
+</li>
+<li class="flex items-center gap-3">
+<div class="w-6 h-6 rounded-full bg-on-error/10 flex items-center justify-center flex-shrink-0 border border-on-error/20">
+</div>
+<span class="font-body-md text-body-md text-on-error/50 flex-grow">Campus Security</span>
+<span class="font-technical-sm text-technical-sm text-on-error/50 opacity-80">PENDING</span>
+</li>
+</ul>
+</div>
+<!-- Action Buttons -->
+<div class="w-full max-w-lg mx-auto space-y-4 mt-auto">
+<!-- Primary Emergency Call Button -->
+<button class="w-full min-h-[64px] bg-surface-bright text-error rounded-full flex items-center justify-center gap-3 px-6 shadow-xl active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-[28px]" style="font-variation-settings: 'FILL' 1;">call</span>
+<span class="font-body-lg text-headline-md tracking-tight">Call 112 — Emergency</span>
+</button>
+<!-- Secondary "Safe Now" Button -->
+<button class="w-full min-h-[56px] bg-transparent border-2 border-on-error/40 text-on-error rounded-full flex items-center justify-center gap-2 px-6 hover:bg-on-error/10 active:scale-95 transition-all">
+<span class="font-body-lg text-body-lg font-semibold tracking-wide">I'm Safe Now</span>
+</button>
+</div>
+</main>
+<!-- Navigation explicitly suppressed for this transactional/emergency screen -->
+</body></html>

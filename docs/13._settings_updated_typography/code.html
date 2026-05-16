@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NARI - Settings</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&amp;family=Nunito+Sans:wght@400;700&amp;family=DM+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-tertiary-fixed": "#2f1316",
+                    "on-secondary-fixed-variant": "#1b4e4f",
+                    "tertiary-fixed-dim": "#ebbabd",
+                    "error": "#ba1a1a",
+                    "surface-bright": "#fcf9f2",
+                    "inverse-on-surface": "#f3f0ea",
+                    "surface-dim": "#dcdad3",
+                    "surface": "#fcf9f2",
+                    "primary-fixed-dim": "#afd0a1",
+                    "on-secondary": "#ffffff",
+                    "surface-container": "#f0eee7",
+                    "surface-variant": "#e5e2db",
+                    "on-background": "#1c1c18",
+                    "primary": "#334f2b",
+                    "on-tertiary": "#ffffff",
+                    "surface-container-low": "#f6f3ec",
+                    "surface-tint": "#496640",
+                    "secondary-container": "#baeced",
+                    "surface-container-highest": "#e5e2db",
+                    "inverse-primary": "#afd0a1",
+                    "background": "#fcf9f2",
+                    "on-secondary-container": "#3c6c6d",
+                    "tertiary": "#613e41",
+                    "on-surface-variant": "#434840",
+                    "on-error": "#ffffff",
+                    "primary-container": "#4a6741",
+                    "outline-variant": "#c3c8bd",
+                    "on-surface": "#1c1c18",
+                    "secondary-fixed-dim": "#9ecfd0",
+                    "on-primary-fixed": "#062104",
+                    "tertiary-container": "#7b5558",
+                    "inverse-surface": "#31312c",
+                    "outline": "#73796f",
+                    "surface-container-lowest": "#ffffff",
+                    "on-tertiary-fixed-variant": "#603d40",
+                    "tertiary-fixed": "#ffdadb",
+                    "on-tertiary-container": "#ffced1",
+                    "on-primary-fixed-variant": "#324e2a",
+                    "on-primary-container": "#c2e4b4",
+                    "secondary-fixed": "#baeced",
+                    "surface-container-high": "#ebe8e1",
+                    "error-container": "#ffdad6",
+                    "primary-fixed": "#caecbc",
+                    "on-secondary-fixed": "#002021",
+                    "on-error-container": "#93000a",
+                    "secondary": "#366667",
+                    "on-primary": "#ffffff"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "margin-mobile": "20px",
+                    "sm": "8px",
+                    "md": "16px",
+                    "xs": "4px",
+                    "margin-desktop": "64px",
+                    "lg": "24px",
+                    "unit": "4px",
+                    "gutter": "16px",
+                    "xl": "40px"
+            },
+            "fontFamily": {
+                    "headline-lg": [
+                            "Nunito"
+                    ],
+                    "body-md": [
+                            "Nunito Sans"
+                    ],
+                    "headline-md": [
+                            "Nunito"
+                    ],
+                    "status-display": [
+                            "Nunito"
+                    ],
+                    "label-caps": [
+                            "Nunito Sans"
+                    ],
+                    "technical-sm": [
+                            "DM Mono"
+                    ],
+                    "body-lg": [
+                            "Nunito Sans"
+                    ]
+            },
+            "fontSize": {
+                    "headline-lg": [
+                            "32px",
+                            {
+                                    "lineHeight": "40px",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "body-md": [
+                            "16px",
+                            {
+                                    "lineHeight": "24px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "headline-md": [
+                            "24px",
+                            {
+                                    "lineHeight": "32px",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "status-display": [
+                            "40px",
+                            {
+                                    "lineHeight": "48px",
+                                    "letterSpacing": "-0.02em",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "label-caps": [
+                            "12px",
+                            {
+                                    "lineHeight": "16px",
+                                    "letterSpacing": "0.1em",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "technical-sm": [
+                            "13px",
+                            {
+                                    "lineHeight": "16px",
+                                    "letterSpacing": "0.05em",
+                                    "fontWeight": "500"
+                            }
+                    ],
+                    "body-lg": [
+                            "18px",
+                            {
+                                    "lineHeight": "28px",
+                                    "fontWeight": "400"
+                            }
+                    ]
+            }
+          }
+        }
+      }
+    </script>
+<style>
+        body {
+            background-color: theme('colors.background');
+            color: theme('colors.on-background');
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="antialiased pb-24 md:pb-0 font-body-md text-body-md">
+<!-- TopAppBar -->
+<header class="bg-surface/80 dark:bg-surface-dim/80 backdrop-blur-xl border-b border-outline-variant/30 shadow-sm sticky top-0 z-40">
+<div class="flex justify-between items-center px-margin-mobile h-16 w-full max-w-7xl mx-auto">
+<button class="text-primary dark:text-primary-fixed-dim hover:bg-surface-container-low transition-colors p-2 rounded-full active:scale-95 duration-200">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">shield_with_heart</span>
+</button>
+<h1 class="font-headline-lg text-headline-lg font-bold tracking-tighter text-on-surface dark:text-inverse-on-surface">NARI</h1>
+<button class="text-primary dark:text-primary-fixed-dim hover:bg-surface-container-low transition-colors p-2 rounded-full active:scale-95 duration-200">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">notifications</span>
+</button>
+</div>
+</header>
+<main class="max-w-7xl mx-auto px-margin-mobile md:px-margin-desktop py-lg space-y-xl">
+<!-- Header -->
+<div>
+<h2 class="font-headline-md text-headline-md text-on-surface mb-xs">Settings</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">Manage your device and personal preferences.</p>
+</div>
+<!-- Section: Device & Bangle -->
+<section class="space-y-md">
+<h3 class="font-label-caps text-label-caps text-primary tracking-widest uppercase">Device &amp; Bangle</h3>
+<div class="bg-surface-container-lowest/80 backdrop-blur-xl rounded-xl border border-outline-variant/30 shadow-[0_10px_30px_-5px_rgba(74,103,65,0.05)] p-md">
+<div class="flex items-center justify-between mb-md">
+<div class="flex items-center gap-sm">
+<div class="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">watch</span>
+</div>
+<div>
+<h4 class="font-body-lg text-body-lg text-on-surface">NARI Bangle Pro</h4>
+<p class="font-technical-sm text-technical-sm text-on-surface-variant">Connected • 84% Battery</p>
+</div>
+</div>
+<button class="font-body-md text-body-md text-primary bg-primary-container/20 px-sm py-xs rounded-lg hover:bg-primary-container/30 transition-colors">
+                        Manage
+                    </button>
+</div>
+<!-- Sensor Health Grid -->
+<div class="grid grid-cols-3 gap-sm mt-md pt-md border-t border-outline-variant/20">
+<div class="flex flex-col items-center p-sm bg-surface-container-low rounded-lg">
+<div class="w-2 h-2 rounded-full bg-primary mb-xs"></div>
+<span class="font-technical-sm text-technical-sm text-on-surface-variant">HRM</span>
+</div>
+<div class="flex flex-col items-center p-sm bg-surface-container-low rounded-lg">
+<div class="w-2 h-2 rounded-full bg-primary mb-xs"></div>
+<span class="font-technical-sm text-technical-sm text-on-surface-variant">GPS</span>
+</div>
+<div class="flex flex-col items-center p-sm bg-surface-container-low rounded-lg">
+<div class="w-2 h-2 rounded-full bg-primary mb-xs"></div>
+<span class="font-technical-sm text-technical-sm text-on-surface-variant">ACCEL</span>
+</div>
+<div class="flex flex-col items-center p-sm bg-surface-container-low rounded-lg">
+<div class="w-2 h-2 rounded-full bg-primary mb-xs"></div>
+<span class="font-technical-sm text-technical-sm text-on-surface-variant">GYRO</span>
+</div>
+<div class="flex flex-col items-center p-sm bg-surface-container-low rounded-lg">
+<div class="w-2 h-2 rounded-full bg-outline mb-xs"></div>
+<span class="font-technical-sm text-technical-sm text-on-surface-variant">TEMP</span>
+</div>
+<div class="flex flex-col items-center p-sm bg-surface-container-low rounded-lg">
+<div class="w-2 h-2 rounded-full bg-primary mb-xs"></div>
+<span class="font-technical-sm text-technical-sm text-on-surface-variant">SYNC</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Section: Account & Safety -->
+<section class="space-y-md">
+<h3 class="font-label-caps text-label-caps text-primary tracking-widest uppercase">Account &amp; Safety</h3>
+<div class="bg-surface-container-lowest/80 backdrop-blur-xl rounded-xl border border-outline-variant/30 shadow-[0_10px_30px_-5px_rgba(74,103,65,0.05)] overflow-hidden">
+<a class="flex items-center justify-between p-md border-b border-outline-variant/20 hover:bg-surface-container-low transition-colors" href="#">
+<div class="flex items-center gap-md">
+<span class="material-symbols-outlined text-on-surface-variant" style="font-variation-settings: 'FILL' 0;">person</span>
+<div>
+<div class="font-body-lg text-body-lg text-on-surface">Profile Information</div>
+<div class="font-body-md text-body-md text-on-surface-variant">Name, email, medical ID</div>
+</div>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+</a>
+<a class="flex items-center justify-between p-md border-b border-outline-variant/20 hover:bg-surface-container-low transition-colors" href="#">
+<div class="flex items-center gap-md">
+<span class="material-symbols-outlined text-on-surface-variant" style="font-variation-settings: 'FILL' 0;">group</span>
+<div>
+<div class="font-body-lg text-body-lg text-on-surface">Emergency Contacts</div>
+<div class="font-body-md text-body-md text-on-surface-variant">3 active contacts</div>
+</div>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+</a>
+<a class="flex items-center justify-between p-md hover:bg-surface-container-low transition-colors" href="#">
+<div class="flex items-center gap-md">
+<span class="material-symbols-outlined text-on-surface-variant" style="font-variation-settings: 'FILL' 0;">notifications_active</span>
+<div>
+<div class="font-body-lg text-body-lg text-on-surface">Alert Preferences</div>
+<div class="font-body-md text-body-md text-on-surface-variant">Sensitivity, silent mode</div>
+</div>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+</a>
+</div>
+</section>
+<!-- Section: App Settings -->
+<section class="space-y-md">
+<h3 class="font-label-caps text-label-caps text-primary tracking-widest uppercase">App Settings</h3>
+<div class="bg-surface-container-lowest/80 backdrop-blur-xl rounded-xl border border-outline-variant/30 shadow-[0_10px_30px_-5px_rgba(74,103,65,0.05)] overflow-hidden">
+<a class="flex items-center justify-between p-md border-b border-outline-variant/20 hover:bg-surface-container-low transition-colors" href="#">
+<div class="flex items-center gap-md">
+<span class="material-symbols-outlined text-on-surface-variant" style="font-variation-settings: 'FILL' 0;">lock</span>
+<div>
+<div class="font-body-lg text-body-lg text-on-surface">Privacy &amp; Security</div>
+<div class="font-body-md text-body-md text-on-surface-variant">Data sharing, location permissions</div>
+</div>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+</a>
+<a class="flex items-center justify-between p-md hover:bg-surface-container-low transition-colors" href="#">
+<div class="flex items-center gap-md">
+<span class="material-symbols-outlined text-on-surface-variant" style="font-variation-settings: 'FILL' 0;">help</span>
+<div>
+<div class="font-body-lg text-body-lg text-on-surface">Help &amp; Support</div>
+<div class="font-body-md text-body-md text-on-surface-variant">FAQ, contact support</div>
+</div>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+</a>
+</div>
+</section>
+<div class="flex justify-center pt-md">
+<button class="font-body-md text-body-md text-error bg-error-container/50 px-lg py-sm rounded-full hover:bg-error-container transition-colors">
+                Log Out
+            </button>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="md:hidden bg-surface-container dark:bg-surface-container-highest backdrop-blur-2xl shadow-[0_-10px_30px_-5px_rgba(74,103,65,0.15)] rounded-t-xl fixed bottom-0 w-full z-50 flex justify-around items-end pb-4 px-2 pt-2">
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant p-2 hover:opacity-80 transition-opacity" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">home</span>
+<span class="font-label-caps text-label-caps mt-1">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant p-2 hover:opacity-80 transition-opacity" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">health_metrics</span>
+<span class="font-label-caps text-label-caps mt-1">Status</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant p-2 hover:opacity-80 transition-opacity" href="#">
+<span class="material-symbols-outlined text-error" style="font-variation-settings: 'FILL' 1;">emergency_share</span>
+<span class="font-label-caps text-label-caps mt-1 text-error">SOS</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant p-2 hover:opacity-80 transition-opacity" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">map</span>
+<span class="font-label-caps text-label-caps mt-1">Map</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-full p-2 hover:opacity-80 transition-opacity transform scale-90 duration-300" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">settings</span>
+<span class="font-label-caps text-label-caps mt-1">Settings</span>
+</a>
+</nav>
+</body></html>
