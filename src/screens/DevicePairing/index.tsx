@@ -2,7 +2,7 @@
  * DevicePairing — BLE device scanning and pairing modal.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
@@ -15,7 +15,7 @@ import { dataProvider } from '../../../dataConfig';
 import { haptic } from '../../services/hapticService';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
-import { spacing, radii, shadows } from '../../theme/spacing';
+import { spacing, radii } from '../../theme/spacing';
 
 type Props = NativeStackScreenProps<SettingsStackParamList, 'DevicePairing'>;
 
@@ -27,13 +27,23 @@ export default function DevicePairingScreen({ navigation }: Props) {
   const [state, setState] = useState<PairingState>('scanning');
   const [devices, setDevices] = useState<string[]>([]);
 
-  useEffect(() => {
-    // Start scanning
-    dataProvider.scanForDevices().then((found) => {
-      setDevices(found);
-      setState(found.length > 0 ? 'found' : 'error');
-    });
+  const scanForBangle = useCallback(() => {
+    setState('scanning');
+    dataProvider
+      .scanForDevices()
+      .then((found) => {
+        setDevices(found);
+        setState(found.length > 0 ? 'found' : 'error');
+      })
+      .catch(() => {
+        setDevices([]);
+        setState('error');
+      });
   }, []);
+
+  useEffect(() => {
+    scanForBangle();
+  }, [scanForBangle]);
 
   const handleConnect = async (deviceName: string) => {
     setState('connecting');
@@ -71,7 +81,9 @@ export default function DevicePairingScreen({ navigation }: Props) {
           )}
         </View>
 
-        <Text style={styles.subtitle}>{t('devicePairing.subtitle')}</Text>
+        <Text style={styles.subtitle} numberOfLines={3}>
+          {t('devicePairing.subtitle')}
+        </Text>
 
         {/* Scanning state */}
         {state === 'scanning' && (
@@ -90,7 +102,9 @@ export default function DevicePairingScreen({ navigation }: Props) {
                   <Text style={styles.deviceEmoji}>⌚</Text>
                 </View>
                 <View style={styles.deviceInfo}>
-                  <Text style={styles.deviceName}>{device}</Text>
+                  <Text style={styles.deviceName} numberOfLines={2}>
+                    {device}
+                  </Text>
                   <Text style={styles.deviceLabel}>
                     {t('devicePairing.found')}
                   </Text>
@@ -117,6 +131,20 @@ export default function DevicePairingScreen({ navigation }: Props) {
           <Card style={styles.successCard}>
             <Text style={styles.successIcon}>✓</Text>
             <Text style={styles.successText}>{t('devicePairing.connected')}</Text>
+          </Card>
+        )}
+
+        {state === 'error' && (
+          <Card style={styles.emptyCard}>
+            <Text style={styles.emptyTitle}>No bangle found</Text>
+            <Text style={styles.emptyText}>
+              Keep your NARI bangle charged and close to this phone, then scan again.
+            </Text>
+            <Button
+              title="Scan again"
+              onPress={scanForBangle}
+              style={styles.scanAgainButton}
+            />
           </Card>
         )}
 
@@ -197,6 +225,7 @@ const styles = StyleSheet.create({
   statusText: {
     ...typography.bodyMedium,
     color: colors.neutral[700],
+    flex: 1,
   },
   deviceCard: {
     width: '100%',
@@ -220,6 +249,7 @@ const styles = StyleSheet.create({
   },
   deviceInfo: {
     flex: 1,
+    minWidth: 0,
   },
   deviceName: {
     ...typography.bodyMedium,
@@ -249,5 +279,26 @@ const styles = StyleSheet.create({
   },
   skipButton: {
     marginTop: spacing['2xl'],
+  },
+  emptyCard: {
+    width: '100%',
+    alignItems: 'center',
+    backgroundColor: colors.brand.linen,
+  },
+  emptyTitle: {
+    ...typography.h3,
+    color: colors.neutral[900],
+    marginBottom: spacing.sm,
+    textAlign: 'center',
+  },
+  emptyText: {
+    ...typography.bodySmall,
+    color: colors.neutral[700],
+    textAlign: 'center',
+    lineHeight: 21,
+    marginBottom: spacing.lg,
+  },
+  scanAgainButton: {
+    minWidth: 160,
   },
 });

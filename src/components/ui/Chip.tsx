@@ -8,7 +8,7 @@ import { TouchableOpacity, Text, StyleSheet, ViewStyle } from 'react-native';
 import { haptic } from '../../services/hapticService';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
-import { spacing, radii } from '../../theme/spacing';
+import { spacing, radii, minTouchable } from '../../theme/spacing';
 
 interface ChipProps {
   label: string;
@@ -32,6 +32,7 @@ export function Chip({ label, selected = false, onPress, style }: ChipProps) {
       ]}
       onPress={handlePress}
       accessibilityRole="button"
+      accessibilityLabel={label}
       accessibilityState={{ selected }}
     >
       <Text style={[styles.label, selected ? styles.labelActive : styles.labelInactive]}>
@@ -43,6 +44,7 @@ export function Chip({ label, selected = false, onPress, style }: ChipProps) {
 
 const styles = StyleSheet.create({
   chip: {
+    minHeight: minTouchable.default,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.lg,
     borderRadius: radii.full,
@@ -58,9 +60,10 @@ const styles = StyleSheet.create({
   },
   label: {
     ...typography.bodySmallMedium,
+    lineHeight: 19,
   },
   labelActive: {
-    color: colors.neutral[0],
+    color: colors.brand.cream,
   },
   labelInactive: {
     color: colors.neutral[700],

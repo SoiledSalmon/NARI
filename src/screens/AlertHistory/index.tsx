@@ -11,6 +11,7 @@ import { SettingsStackParamList, ROUTES } from '../../navigation/routes';
 import { TopBar } from '../../components/layout/TopBar';
 import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
+import { SkeletonCard } from '../../components/ui/SkeletonLoader';
 import { useAlertStore } from '../../stores/alertStore';
 import { dataProvider } from '../../../dataConfig';
 import { Alert } from '../../data/types';
@@ -26,10 +27,11 @@ export default function AlertHistoryScreen({ navigation }: Props) {
 
   useEffect(() => {
     setLoading(true);
-    dataProvider.getAllAlerts().then((alerts) => {
-      setAllAlerts(alerts);
-      setLoading(false);
-    });
+    dataProvider
+      .getAllAlerts()
+      .then(setAllAlerts)
+      .catch(() => setAllAlerts([]))
+      .finally(() => setLoading(false));
   }, [setAllAlerts, setLoading]);
 
   const formatDate = (timestamp: number) => {
@@ -48,18 +50,24 @@ export default function AlertHistoryScreen({ navigation }: Props) {
           alertId: item.id,
         })
       }
+      accessibilityRole="button"
+      accessibilityLabel={`Open alert: ${item.title}`}
     >
       <Card style={styles.alertCard}>
         <View style={styles.alertHeader}>
           <View style={styles.alertInfo}>
-            <Text style={styles.alertTitle}>{item.title}</Text>
+            <Text style={styles.alertTitle} numberOfLines={2}>
+              {item.title}
+            </Text>
             <Text style={styles.alertDate}>{formatDate(item.timestamp)}</Text>
           </View>
           <Badge
             label={
               item.outcome === 'resolved'
                 ? t('alertHistory.resolved')
-                : t('alertHistory.falseAlarm')
+                : item.outcome === 'false_alarm'
+                  ? t('alertHistory.falseAlarm')
+                  : 'ACTIVE'
             }
             preset={item.outcome === 'resolved' ? 'resolved' : 'falseAlarm'}
           />
@@ -70,7 +78,9 @@ export default function AlertHistoryScreen({ navigation }: Props) {
         {item.locationLabel ? (
           <View style={styles.locationRow}>
             <Text style={styles.locationIcon}>📍</Text>
-            <Text style={styles.locationText}>{item.locationLabel}</Text>
+            <Text style={styles.locationText} numberOfLines={2}>
+              {item.locationLabel}
+            </Text>
           </View>
         ) : null}
       </Card>
@@ -88,14 +98,27 @@ export default function AlertHistoryScreen({ navigation }: Props) {
         renderItem={renderAlert}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
+        ListHeaderComponent={
+          isLoading ? (
+            <View style={styles.loadingStack}>
+              <SkeletonCard style={styles.loadingCard} />
+              <SkeletonCard style={styles.loadingCard} />
+              <SkeletonCard style={styles.loadingCard} />
+            </View>
+          ) : null
+        }
         ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyIcon}>🔔</Text>
-            <Text style={styles.emptyTitle}>No alerts yet</Text>
-            <Text style={styles.emptySubtitle}>
-              Past safety events will appear here.
-            </Text>
-          </View>
+          isLoading ? null : (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyIcon}>🔔</Text>
+              <Text style={styles.emptyTitle} numberOfLines={2}>
+                No alerts yet
+              </Text>
+              <Text style={styles.emptySubtitle} numberOfLines={3}>
+                Past safety events will appear here.
+              </Text>
+            </View>
+          )
         }
       />
     </View>
@@ -130,6 +153,7 @@ const styles = StyleSheet.create({
   alertInfo: {
     flex: 1,
     marginRight: spacing.md,
+    minWidth: 0,
   },
   alertTitle: {
     ...typography.bodyMedium,
@@ -144,6 +168,7 @@ const styles = StyleSheet.create({
     ...typography.bodySmall,
     color: colors.neutral[700],
     marginBottom: spacing.sm,
+    lineHeight: 21,
   },
   locationRow: {
     flexDirection: 'row',
@@ -156,6 +181,14 @@ const styles = StyleSheet.create({
   locationText: {
     ...typography.caption,
     color: colors.neutral[500],
+    flex: 1,
+    minWidth: 0,
+  },
+  loadingStack: {
+    gap: spacing.md,
+  },
+  loadingCard: {
+    minHeight: 104,
   },
   emptyContainer: {
     alignItems: 'center',
@@ -173,5 +206,8 @@ const styles = StyleSheet.create({
   emptySubtitle: {
     ...typography.bodySmall,
     color: colors.neutral[500],
+    maxWidth: 280,
+    textAlign: 'center',
+    lineHeight: 21,
   },
 });

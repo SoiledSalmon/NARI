@@ -59,12 +59,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 8,
-    borderColor: colors.status.danger,
+    borderColor: colors.status.dangerLight,
     overflow: 'hidden',
   },
   fill: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: colors.status.danger,
+    backgroundColor: colors.status.dangerLight,
     borderRadius: 999,
   },
   inner: {

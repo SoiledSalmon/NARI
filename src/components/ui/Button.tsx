@@ -25,7 +25,7 @@ import { radii, shadows, minTouchable } from '../../theme/spacing';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-type ButtonVariant = 'primary' | 'outlined' | 'text' | 'danger';
+type ButtonVariant = 'primary' | 'outlined' | 'text' | 'danger' | 'emergency';
 
 interface ButtonProps {
   title: string;
@@ -78,6 +78,7 @@ export function Button({
       ]}
       accessibilityRole="button"
       accessibilityLabel={title}
+      accessibilityState={{ disabled: disabled || loading, busy: loading }}
     >
       {loading ? (
         <ActivityIndicator
@@ -114,7 +115,7 @@ const VARIANT_STYLES: Record<
       ...shadows.md,
     },
     textStyle: {
-      color: colors.neutral[0],
+      color: colors.brand.cream,
     },
   },
   outlined: {
@@ -141,7 +142,16 @@ const VARIANT_STYLES: Record<
       ...shadows.md,
     },
     textStyle: {
-      color: colors.neutral[0],
+      color: colors.brand.cream,
+    },
+  },
+  emergency: {
+    container: {
+      backgroundColor: colors.brand.cream,
+      ...shadows.md,
+    },
+    textStyle: {
+      color: colors.status.danger,
     },
   },
 };

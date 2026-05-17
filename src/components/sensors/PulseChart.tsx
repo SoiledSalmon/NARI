@@ -87,10 +87,12 @@ const styles = StyleSheet.create({
   label: {
     ...typography.bodySmallMedium,
     color: colors.neutral[700],
+    lineHeight: 20,
   },
   currentValue: {
     ...typography.mono,
     fontWeight: '600',
+    fontVariant: ['tabular-nums'],
   },
   chartArea: {
     flexDirection: 'row',
@@ -110,5 +112,6 @@ const styles = StyleSheet.create({
   rangeText: {
     ...typography.monoSmall,
     color: colors.neutral[500],
+    fontVariant: ['tabular-nums'],
   },
 });

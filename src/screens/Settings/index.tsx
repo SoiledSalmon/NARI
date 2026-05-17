@@ -37,6 +37,13 @@ export default function SettingsScreen() {
   const logout = useAuthStore((s) => s.logout);
   const demoTapCount = useRef(0);
   const demoMode = useDemoMode();
+  const deviceConnected = device?.isConnected === true;
+  const deviceDisconnected = device?.isConnected === false;
+  const deviceStatusLabel = device
+    ? deviceConnected
+      ? t('settings.deviceConnected')
+      : 'Not paired'
+    : 'Checking';
 
   useEffect(() => {
     dataProvider.getDeviceState().then(setDevice);
@@ -52,18 +59,21 @@ export default function SettingsScreen() {
 
       {/* Device Section */}
       <Text style={styles.sectionLabel}>{t('settings.deviceSection')}</Text>
-      <Card style={styles.deviceCard}>
+      <Card style={[styles.deviceCard, deviceDisconnected && styles.deviceCardDisconnected]}>
         <View style={styles.deviceRow}>
-          <View style={styles.deviceIcon}>
+          <View style={[styles.deviceIcon, deviceDisconnected && styles.deviceIconDisconnected]}>
             <Text style={styles.deviceEmoji}>⌚</Text>
           </View>
           <View style={styles.deviceInfo}>
-            <Text style={styles.deviceName}>
+            <Text style={styles.deviceName} numberOfLines={2}>
               {device?.name ?? t('settings.deviceName')}
             </Text>
             <View style={styles.deviceMeta}>
-              <Badge label={t('settings.deviceConnected')} preset="resolved" />
-              <Text style={styles.deviceBattery}>
+              <Badge
+                label={deviceStatusLabel}
+                preset={deviceConnected ? 'resolved' : 'falseAlarm'}
+              />
+              <Text style={styles.deviceBattery} numberOfLines={1}>
                 {t('settings.deviceBattery', {
                   percent: device?.batteryPercent ?? '--',
                 })}
@@ -74,6 +84,8 @@ export default function SettingsScreen() {
             onPress={() =>
               navigation.navigate(ROUTES.SETTINGS_STACK.DEVICE_PAIRING)
             }
+            accessibilityRole="button"
+            accessibilityLabel="Manage NARI bangle"
           >
             <Text style={styles.manageText}>{t('settings.deviceManage')}</Text>
           </TouchableOpacity>
@@ -144,7 +156,12 @@ export default function SettingsScreen() {
       />
 
       {/* Logout */}
-      <TouchableOpacity style={styles.logoutButton} onPress={logout}>
+      <TouchableOpacity
+        style={styles.logoutButton}
+        onPress={logout}
+        accessibilityRole="button"
+        accessibilityLabel={t('settings.logOut')}
+      >
         <Text style={styles.logoutText}>{t('settings.logOut')}</Text>
       </TouchableOpacity>
     </ScrollView>
@@ -165,10 +182,20 @@ function SettingsRow({
   rightAccessory?: React.ReactNode;
 }) {
   return (
-    <TouchableOpacity style={styles.settingsRow} onPress={onPress}>
+    <TouchableOpacity
+      style={styles.settingsRow}
+      onPress={onPress}
+      disabled={!onPress}
+      accessibilityRole={onPress ? 'button' : undefined}
+      accessibilityLabel={onPress ? title : undefined}
+    >
       <View style={styles.settingsRowContent}>
-        <Text style={styles.settingsRowTitle}>{title}</Text>
-        <Text style={styles.settingsRowSubtitle}>{subtitle}</Text>
+        <Text style={styles.settingsRowTitle} numberOfLines={2}>
+          {title}
+        </Text>
+        <Text style={styles.settingsRowSubtitle} numberOfLines={3}>
+          {subtitle}
+        </Text>
       </View>
       {rightAccessory ?? <Text style={styles.chevron}>›</Text>}
     </TouchableOpacity>
@@ -206,6 +233,9 @@ const styles = StyleSheet.create({
   deviceCard: {
     marginBottom: spacing.md,
   },
+  deviceCardDisconnected: {
+    backgroundColor: colors.brand.linen,
+  },
   deviceRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -219,11 +249,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: spacing.md,
   },
+  deviceIconDisconnected: {
+    backgroundColor: colors.neutral[200],
+  },
   deviceEmoji: {
     fontSize: 22,
   },
   deviceInfo: {
     flex: 1,
+    minWidth: 0,
   },
   deviceName: {
     ...typography.bodyMedium,
@@ -234,6 +268,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+    flexWrap: 'wrap',
   },
   deviceBattery: {
     ...typography.caption,
@@ -255,6 +290,7 @@ const styles = StyleSheet.create({
   },
   settingsRowContent: {
     flex: 1,
+    minWidth: 0,
   },
   settingsRowTitle: {
     ...typography.bodyMedium,

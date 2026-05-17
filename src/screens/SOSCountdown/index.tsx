@@ -60,7 +60,7 @@ export default function SOSCountdownScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.status.dangerLight,
+    backgroundColor: colors.status.danger,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing['3xl'],
@@ -70,13 +70,13 @@ const styles = StyleSheet.create({
   },
   title: {
     ...typography.h1,
-    color: colors.status.danger,
+    color: colors.brand.cream,
     marginBottom: spacing.sm,
     textAlign: 'center',
   },
   subtitle: {
     ...typography.bodySmall,
-    color: colors.neutral[700],
+    color: colors.status.dangerLight,
     textAlign: 'center',
     marginBottom: spacing['5xl'],
   },
@@ -85,7 +85,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing['3xl'],
     borderRadius: radii.full,
     borderWidth: 2,
-    borderColor: colors.status.danger,
+    borderColor: colors.status.dangerLight,
+    backgroundColor: colors.status.dangerLight,
   },
   cancelText: {
     ...typography.bodySemibold,

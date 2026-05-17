@@ -40,14 +40,14 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: colors.brand.primary,
+    backgroundColor: colors.status.safe,
   },
   dot: {
     width: 14,
     height: 14,
     borderRadius: 7,
-    backgroundColor: colors.brand.primary,
+    backgroundColor: colors.status.safe,
     borderWidth: 3,
-    borderColor: colors.neutral[0],
+    borderColor: colors.brand.cream,
   },
 });

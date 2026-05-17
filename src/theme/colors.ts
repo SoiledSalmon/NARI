@@ -19,11 +19,11 @@ export const colors = {
 
   /* ───── Semantic / Status ───── */
   status: {
-    safe: '#588157',        // Sage Green
+    safe: '#3F6B46',        // Deep Sage Green
     safeLight: '#EDF3EB',   // Background tint for safe state
-    alert: '#DAA520',       // Amber
+    alert: '#8A5A00',       // Deep Amber for accessible text/surfaces
     alertLight: '#FDF5E0',  // Background tint for alert state
-    danger: '#B22222',      // Crimson
+    danger: '#A31621',      // Deep Crimson
     dangerLight: '#FCEAEA', // Background tint for danger state / SOS bg
   },
 

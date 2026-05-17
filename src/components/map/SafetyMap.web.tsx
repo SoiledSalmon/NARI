@@ -13,10 +13,15 @@ interface SafetyMapProps {
 }
 
 export function SafetyMap({ incidents }: SafetyMapProps) {
+  const incidentText =
+    incidents.length === 1
+      ? '1 nearby report'
+      : `${incidents.length} nearby reports`;
+
   return (
     <View style={styles.container}>
       <LocationDot />
-      <Text style={styles.label}>{incidents.length} incidents nearby</Text>
+      <Text style={styles.label}>{incidentText}</Text>
     </View>
   );
 }

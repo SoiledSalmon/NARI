@@ -5,46 +5,60 @@ import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { useSensorStore } from '../../stores/sensorStore';
 import { useAlertStore } from '../../stores/alertStore';
-import { useAuthStore } from '../../stores/authStore';
 import { useJourneyStore } from '../../stores/journeyStore';
 import { dataProvider } from '../../../dataConfig';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
-import { spacing, radii, shadows } from '../../theme/spacing';
+import { spacing, radii, shadows, minTouchable } from '../../theme/spacing';
 
 const STATUS_CONFIG = {
   safe: {
-    bg: colors.status.safeLight,
+    bg: colors.status.safe,
+    fg: colors.brand.cream,
+    mutedFg: colors.brand.cream,
     accent: colors.status.safe,
     icon: '✓',
   },
   alert: {
-    bg: colors.status.alertLight,
+    bg: colors.status.alert,
+    fg: colors.brand.cream,
+    mutedFg: colors.status.alertLight,
     accent: colors.status.alert,
-    icon: '⚠',
+    icon: '!',
   },
   danger: {
-    bg: colors.status.dangerLight,
+    bg: colors.status.danger,
+    fg: colors.brand.cream,
+    mutedFg: colors.status.dangerLight,
     accent: colors.status.danger,
     icon: '!',
   },
 };
 
+const SIGNALS = [
+  { key: 'heartRate', label: 'HR' },
+  { key: 'motion', label: 'Motion' },
+  { key: 'stress', label: 'Stress' },
+] as const;
+
+const SIGNAL_COLORS = {
+  normal: colors.status.safe,
+  elevated: colors.status.alert,
+  critical: colors.status.danger,
+};
+
 export default function HomeScreen() {
   const { t } = useTranslation();
-  const user = useAuthStore((s) => s.user);
   const status = useSensorStore((s) => s.status);
   const setStatus = useSensorStore((s) => s.setStatus);
   const { recentAlerts, setRecentAlerts } = useAlertStore();
   const journeyActive = useJourneyStore((s) => s.isActive);
 
-  // Subscribe to status updates
   useEffect(() => {
     const unsubscribe = dataProvider.subscribeToStatus(setStatus);
     return unsubscribe;
   }, [setStatus]);
 
-  // Load recent alerts
   useEffect(() => {
     dataProvider.getRecentAlerts(3).then(setRecentAlerts);
   }, [setRecentAlerts]);
@@ -52,106 +66,209 @@ export default function HomeScreen() {
   const level = status?.level ?? 'safe';
   const config = STATUS_CONFIG[level];
   const connectivity = status?.connectivity;
+  const sensors = status?.sensors;
+  const connected = Boolean(connectivity?.ble);
+  const hasLocation = connectivity?.gps !== false;
+  const heroTitle = connected ? t(`home.${level}Status`) : t('home.deviceBanner');
+  const heroSubtitle = connected
+    ? hasLocation
+      ? 'JP Nagar · 11:42 PM'
+      : 'Location unavailable'
+    : t('home.deviceBannerSubtitle');
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.scrollContent}
-    >
-      {/* Greeting */}
+    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
       <View style={styles.header}>
-        <Text style={styles.greeting}>
-          {t('home.greeting', { name: user?.name ?? 'User' })}
-        </Text>
-        <View style={styles.connectivityDots}>
-          <View style={[styles.dot, { backgroundColor: connectivity?.gps ? colors.connectivity.gps : colors.connectivity.inactive }]} />
-          <Text style={styles.dotLabel}>{t('home.gps')}</Text>
-          <View style={[styles.dot, { backgroundColor: connectivity?.ble ? colors.connectivity.ble : colors.connectivity.inactive }]} />
-          <Text style={styles.dotLabel}>{t('home.ble')}</Text>
-          <View style={[styles.dot, { backgroundColor: connectivity?.net ? colors.connectivity.net : colors.connectivity.inactive }]} />
-          <Text style={styles.dotLabel}>{t('home.net')}</Text>
+        <View style={styles.wordmarkRow}>
+          <View
+            style={[
+              styles.statusDot,
+              { backgroundColor: connected ? colors.status.safe : colors.neutral[400] },
+            ]}
+          />
+          <Text style={styles.wordmark}>{t('common.appName')}</Text>
         </View>
+        <TouchableOpacity
+          style={styles.bellButton}
+          accessibilityRole="button"
+          accessibilityLabel="Notifications"
+        >
+          <Text style={styles.bellText}>!</Text>
+        </TouchableOpacity>
       </View>
 
-      {/* Hero Status Card */}
-      <Card style={[styles.heroCard, { backgroundColor: config.bg }]}>
-        <View style={styles.heroRow}>
-          <View style={[styles.heroIcon, { backgroundColor: config.accent }]}>
-            <Text style={styles.heroIconText}>{config.icon}</Text>
+      <TouchableOpacity activeOpacity={0.9} accessibilityRole="button" accessibilityLabel={heroTitle}>
+        <Card
+          style={[
+            styles.heroCard,
+            { backgroundColor: connected ? config.bg : colors.neutral[700] },
+          ]}
+        >
+          <View style={styles.heroIconWrap}>
+            <View style={styles.heroIcon}>
+              <Text style={styles.heroIconText}>{config.icon}</Text>
+            </View>
           </View>
-          <View style={styles.heroText}>
-            <Text style={[styles.heroTitle, { color: config.accent }]}>
-              {t(`home.${level}Status`)}
-            </Text>
-            <Text style={styles.heroSubtitle}>
-              {t(`home.${level}Subtitle`)}
-            </Text>
-          </View>
-        </View>
-        {status && (
-          <View style={styles.scoreRow}>
-            <Text style={[styles.scoreLabel, { color: config.accent }]}>
-              Safety Score
-            </Text>
-            <Text style={[styles.scoreValue, { color: config.accent }]}>
-              {status.score}/100
-            </Text>
-          </View>
-        )}
-      </Card>
-
-      {/* Journey Card */}
-      {!journeyActive ? (
-        <Card style={styles.journeyCard}>
-          <Text style={styles.journeyTitle}>{t('home.journeyTitle')}</Text>
-          <Text style={styles.journeySubtitle}>
-            {t('home.journeySubtitle')}
+          <Text
+            style={[styles.heroTitle, { color: connected ? config.fg : colors.brand.cream }]}
+            numberOfLines={2}
+            adjustsFontSizeToFit
+          >
+            {heroTitle}
           </Text>
-          <TouchableOpacity style={styles.journeyButton}>
-            <Text style={styles.journeyButtonText}>Start →</Text>
-          </TouchableOpacity>
+          <Text
+            style={[styles.heroSubtitle, { color: connected ? config.mutedFg : colors.brand.cream }]}
+            numberOfLines={3}
+          >
+            {heroSubtitle}
+          </Text>
+
+          <View style={styles.signalRow}>
+            {SIGNALS.map((signal) => {
+              const reading = sensors?.[signal.key];
+              const dotColor = reading ? SIGNAL_COLORS[reading.status] : colors.neutral[400];
+              return (
+                <View key={signal.key} style={styles.signalPill}>
+                  <View style={[styles.signalDot, { backgroundColor: dotColor }]} />
+                  <Text
+                    style={[styles.signalLabel, { color: connected ? config.fg : colors.brand.cream }]}
+                    numberOfLines={1}
+                  >
+                    {signal.label}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
         </Card>
-      ) : (
-        <Card style={[styles.journeyCard, { backgroundColor: colors.status.safeLight }]}>
-          <Badge label={t('home.journeyActive')} preset="nari" />
+      </TouchableOpacity>
+
+      {!connected && (
+        <Card style={styles.deviceBanner}>
+          <View style={styles.bannerRow}>
+            <View style={styles.bannerIcon}>
+              <Text style={styles.bannerIconText}>⌁</Text>
+            </View>
+            <View style={styles.bannerText}>
+              <Text style={styles.deviceTitle} numberOfLines={2}>
+                {t('home.deviceBanner')}
+              </Text>
+              <Text style={styles.deviceSubtitle} numberOfLines={3}>
+                {t('home.deviceBannerSubtitle')}
+              </Text>
+            </View>
+          </View>
         </Card>
       )}
 
-      {/* Device Banner */}
-      <Card style={styles.deviceBanner}>
-        <Text style={styles.deviceTitle}>{t('home.deviceBanner')}</Text>
-        <Text style={styles.deviceSubtitle}>
-          {t('home.deviceBannerSubtitle')}
-        </Text>
-      </Card>
+      {!journeyActive ? (
+        <Card style={styles.journeyCard}>
+          <View style={styles.journeyAccent} />
+          <View style={styles.journeyContent}>
+            <View style={styles.journeyIcon}>
+              <Text style={styles.journeyIconText}>↗</Text>
+            </View>
+            <View style={styles.journeyText}>
+              <Text style={styles.journeyTitle} numberOfLines={2}>
+                {t('home.journeyTitle')}
+              </Text>
+              <Text style={styles.journeySubtitle} numberOfLines={4}>
+                {t('home.journeySubtitle')}
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.journeyButton}
+              accessibilityRole="button"
+              accessibilityLabel={t('home.journeyTitle')}
+            >
+              <Text style={styles.journeyButtonText}>→</Text>
+            </TouchableOpacity>
+          </View>
+        </Card>
+      ) : (
+        <Card style={[styles.journeyCard, styles.journeyActiveCard]}>
+          <View style={styles.journeyActiveTop}>
+            <Badge label={t('home.journeyActive')} preset="nari" />
+            <Text style={styles.journeyActiveTime}>12 min</Text>
+          </View>
+          <Text style={styles.journeyTitle} numberOfLines={2}>
+            Journey mode is active
+          </Text>
+          <Text style={styles.journeySubtitle} numberOfLines={4}>
+            {t('home.journeyWatching', { contacts: 'Amma, Preethi' })}
+          </Text>
+          <TouchableOpacity
+            style={styles.arrivedButton}
+            accessibilityRole="button"
+            accessibilityLabel="I've Arrived Safely"
+          >
+            <Text style={styles.arrivedButtonText}>I've Arrived Safely</Text>
+          </TouchableOpacity>
+        </Card>
+      )}
 
-      {/* Recent Alerts */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{t('home.recentAlerts')}</Text>
-        {recentAlerts.length === 0 ? (
-          <Card>
-            <Text style={styles.emptyTitle}>{t('home.noAlerts')}</Text>
-            <Text style={styles.emptySubtitle}>
-              {t('home.noAlertsSubtitle')}
-            </Text>
-          </Card>
-        ) : (
-          recentAlerts.map((alert) => (
+      {recentAlerts.length > 0 && (
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>{t('home.recentAlerts')}</Text>
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel="View all alerts">
+              <Text style={styles.viewAllText}>View all</Text>
+            </TouchableOpacity>
+          </View>
+          {recentAlerts.slice(0, 2).map((alert) => (
             <Card key={alert.id} style={styles.alertCard}>
               <View style={styles.alertHeader}>
-                <Text style={styles.alertTitle}>{alert.title}</Text>
-                <Badge
-                  label={alert.outcome === 'resolved' ? 'RESOLVED' : 'FALSE ALARM'}
-                  preset={alert.outcome === 'resolved' ? 'resolved' : 'falseAlarm'}
-                />
+                <View style={styles.alertIcon}>
+                  <Text style={styles.alertIconText}>!</Text>
+                </View>
+                <View style={styles.alertText}>
+                  <Text style={styles.alertTitle} numberOfLines={2}>
+                    {alert.title}
+                  </Text>
+                  <Text style={styles.alertDesc} numberOfLines={2}>
+                    {alert.description}
+                  </Text>
+                </View>
+                <Text style={styles.alertTime}>
+                  {new Date(alert.timestamp).toLocaleDateString()}
+                </Text>
               </View>
-              <Text style={styles.alertDesc}>{alert.description}</Text>
-              <Text style={styles.alertTime}>
-                {new Date(alert.timestamp).toLocaleDateString()}
-              </Text>
             </Card>
-          ))
-        )}
+          ))}
+        </View>
+      )}
+
+      <View style={styles.connectivityPanel}>
+        <Text style={styles.panelTitle}>Signal status</Text>
+        <View style={styles.connectivityDots}>
+          <View style={styles.connectivityItem}>
+            <View
+              style={[
+                styles.dot,
+                { backgroundColor: connectivity?.gps ? colors.connectivity.gps : colors.connectivity.inactive },
+              ]}
+            />
+            <Text style={styles.dotLabel}>{t('home.gps')}</Text>
+          </View>
+          <View style={styles.connectivityItem}>
+            <View
+              style={[
+                styles.dot,
+                { backgroundColor: connectivity?.ble ? colors.connectivity.ble : colors.connectivity.inactive },
+              ]}
+            />
+            <Text style={styles.dotLabel}>{t('home.ble')}</Text>
+          </View>
+          <View style={styles.connectivityItem}>
+            <View
+              style={[
+                styles.dot,
+                { backgroundColor: connectivity?.net ? colors.connectivity.net : colors.connectivity.inactive },
+              ]}
+            />
+            <Text style={styles.dotLabel}>{t('home.net')}</Text>
+          </View>
+        </View>
       </View>
     </ScrollView>
   );
@@ -164,109 +281,140 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: spacing.xl,
-    paddingTop: 60,
-    paddingBottom: 100, // space above tab bar
+    paddingTop: spacing['3xl'],
+    paddingBottom: 100,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing['2xl'],
+    marginBottom: spacing['3xl'],
   },
-  greeting: {
+  wordmarkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  statusDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  wordmark: {
     ...typography.h1,
+    fontSize: 32,
+    lineHeight: 38,
     color: colors.neutral[900],
-    flex: 1,
+    letterSpacing: 1,
   },
-  connectivityDots: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  dotLabel: {
-    ...typography.monoSmall,
-    color: colors.neutral[500],
-    marginRight: 6,
-  },
-  heroCard: {
-    marginBottom: spacing.lg,
-    padding: spacing.xl,
-  },
-  heroRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  heroIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+  bellButton: {
+    width: minTouchable.default,
+    height: minTouchable.default,
+    borderRadius: minTouchable.default / 2,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: spacing.lg,
+    backgroundColor: colors.brand.linen,
+  },
+  bellText: {
+    ...typography.h3,
+    color: colors.brand.primary,
+  },
+  heroCard: {
+    minHeight: 330,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing['2xl'],
+    paddingHorizontal: spacing['2xl'],
+    paddingVertical: spacing['4xl'],
+    ...shadows.lg,
+  },
+  heroIconWrap: {
+    width: 104,
+    height: 104,
+    borderRadius: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.overlay.white40,
+    marginBottom: spacing['2xl'],
+  },
+  heroIcon: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.overlay.white40,
   },
   heroIconText: {
-    fontSize: 22,
-    color: colors.neutral[0],
-  },
-  heroText: {
-    flex: 1,
-  },
-  heroTitle: {
-    ...typography.h2,
-    marginBottom: 2,
-  },
-  heroSubtitle: {
-    ...typography.bodySmall,
-    color: colors.neutral[700],
-  },
-  scoreRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: spacing.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.neutral[300],
-  },
-  scoreLabel: {
-    ...typography.captionMedium,
-  },
-  scoreValue: {
-    ...typography.mono,
+    fontSize: 34,
+    color: colors.brand.cream,
     fontWeight: '700',
   },
-  journeyCard: {
-    marginBottom: spacing.lg,
+  heroTitle: {
+    ...typography.hero,
+    fontSize: 42,
+    lineHeight: 50,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: spacing.md,
   },
-  journeyTitle: {
-    ...typography.h3,
-    color: colors.neutral[900],
-    marginBottom: 4,
+  heroSubtitle: {
+    ...typography.body,
+    opacity: 0.86,
+    textAlign: 'center',
+    marginBottom: spacing['2xl'],
+    lineHeight: 26,
   },
-  journeySubtitle: {
-    ...typography.bodySmall,
-    color: colors.neutral[500],
-    marginBottom: spacing.lg,
+  signalRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: spacing.sm,
   },
-  journeyButton: {
-    alignSelf: 'flex-start',
-    backgroundColor: colors.brand.primary,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.xl,
+  signalPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 34,
+    paddingHorizontal: spacing.md,
     borderRadius: radii.full,
+    backgroundColor: 'rgba(26,26,26,0.24)',
+    gap: spacing.sm,
   },
-  journeyButtonText: {
-    ...typography.bodySmallMedium,
-    color: colors.neutral[0],
+  signalDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: colors.overlay.white80,
+  },
+  signalLabel: {
+    ...typography.captionMedium,
+    letterSpacing: 0.7,
   },
   deviceBanner: {
-    marginBottom: spacing.lg,
+    marginBottom: spacing['2xl'],
     backgroundColor: colors.brand.sand,
+  },
+  bannerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  bannerIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.neutral[200],
+  },
+  bannerIconText: {
+    ...typography.h3,
+    color: colors.neutral[700],
+  },
+  bannerText: {
+    flex: 1,
+    minWidth: 0,
   },
   deviceTitle: {
     ...typography.bodyMedium,
@@ -277,46 +425,186 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.neutral[500],
   },
+  journeyCard: {
+    marginBottom: spacing['2xl'],
+    padding: 0,
+  },
+  journeyAccent: {
+    position: 'absolute',
+    right: -42,
+    top: -54,
+    width: 142,
+    height: 142,
+    borderRadius: 71,
+    backgroundColor: colors.utility.infoLight,
+  },
+  journeyContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing['2xl'],
+    gap: spacing.md,
+  },
+  journeyIcon: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.utility.infoLight,
+  },
+  journeyIconText: {
+    ...typography.h2,
+    color: colors.brand.primary,
+  },
+  journeyText: {
+    flex: 1,
+    minWidth: 0,
+  },
+  journeyTitle: {
+    ...typography.h3,
+    fontSize: 20,
+    lineHeight: 26,
+    color: colors.neutral[900],
+    marginBottom: 4,
+  },
+  journeySubtitle: {
+    ...typography.bodySmall,
+    color: colors.neutral[500],
+    lineHeight: 21,
+  },
+  journeyButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.brand.sand,
+  },
+  journeyButtonText: {
+    ...typography.h2,
+    color: colors.brand.primary,
+  },
+  journeyActiveCard: {
+    backgroundColor: colors.status.safeLight,
+    padding: spacing['2xl'],
+  },
+  journeyActiveTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+  },
+  journeyActiveTime: {
+    ...typography.mono,
+    color: colors.status.safe,
+    fontVariant: ['tabular-nums'],
+  },
+  arrivedButton: {
+    minHeight: 52,
+    borderRadius: radii.full,
+    backgroundColor: colors.status.safe,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.lg,
+  },
+  arrivedButtonText: {
+    ...typography.bodySemibold,
+    color: colors.brand.cream,
+  },
   section: {
     marginBottom: spacing['2xl'],
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.lg,
+  },
   sectionTitle: {
     ...typography.h2,
+    fontSize: 23,
+    lineHeight: 30,
     color: colors.neutral[900],
-    marginBottom: spacing.lg,
+  },
+  viewAllText: {
+    ...typography.captionMedium,
+    color: colors.brand.primary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
   },
   alertCard: {
     marginBottom: spacing.md,
   },
   alertHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.sm,
+    gap: spacing.md,
+  },
+  alertIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.status.alertLight,
+  },
+  alertIconText: {
+    ...typography.h3,
+    color: colors.status.alert,
+  },
+  alertText: {
+    flex: 1,
+    minWidth: 0,
   },
   alertTitle: {
     ...typography.bodyMedium,
     color: colors.neutral[900],
-    flex: 1,
+    lineHeight: 23,
   },
   alertDesc: {
     ...typography.bodySmall,
     color: colors.neutral[700],
-    marginBottom: spacing.sm,
+    lineHeight: 20,
   },
   alertTime: {
     ...typography.caption,
     color: colors.neutral[500],
+    fontVariant: ['tabular-nums'],
+    flexShrink: 0,
   },
-  emptyTitle: {
-    ...typography.bodyMedium,
-    color: colors.neutral[700],
-    textAlign: 'center',
-    marginBottom: 4,
+  connectivityPanel: {
+    marginTop: spacing.md,
+    paddingTop: spacing.lg,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.neutral[200],
   },
-  emptySubtitle: {
-    ...typography.caption,
+  panelTitle: {
+    ...typography.captionMedium,
     color: colors.neutral[500],
-    textAlign: 'center',
+    marginBottom: spacing.sm,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  connectivityDots: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  connectivityItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    minWidth: 0,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  dotLabel: {
+    ...typography.monoSmall,
+    color: colors.neutral[500],
+    flexShrink: 1,
   },
 });

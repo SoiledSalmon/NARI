@@ -56,6 +56,7 @@ const styles = StyleSheet.create({
   label: {
     ...typography.captionMedium,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.7,
+    lineHeight: 15,
   },
 });
