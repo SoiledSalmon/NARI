@@ -1,4 +1,6 @@
-\---
+# NARI — Design System
+
+---
 
 name: NARI
 colors:
@@ -180,4 +182,3 @@ Sensor data (Battery, GPS, Signal) is presented in JetBrains Mono within small, 
 ### SOS Trigger
 
 A unique component that requires a long-press or swipe-to-confirm gesture. It uses the Crimson base and an aggressive, expanding backdrop pulse to indicate it is active.
-

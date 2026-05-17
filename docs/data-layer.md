@@ -305,7 +305,7 @@ export const DEMO_SCRIPT: DemoStep[] = [
   {
     startAt: 40, duration: 10,
     sensorOverride: { hr: { bpm: 118, rmssd: 14, zScore: 2.8 }, imu: { sma: 2.4, activityLabel: 'abnormal' } },
-    mlOverride: { fusion: { safetyScore: 28, status: 'high_risk' }, lstm: { stressLabel: 'racing', confidence: 0.88 }, tcn: { motionLabel: 'abnormal', confidence: 0.79 } },
+    mlOverride: { fusion: { safetyScore: 28, status: high_risk' }, lstm: { stressLabel: 'racing', confidence: 0.88 }, tcn: { motionLabel: 'abnormal', confidence: 0.79 } },
     uiEvent: 'show_ambiguous_banner'
   },
   // 50–60s: Distress — trigger SOS countdown
