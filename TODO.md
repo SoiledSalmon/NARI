@@ -1,0 +1,16 @@
+- recaptcha screen can be bundled in our ui nicely, the redirected recaptcha screen feels very odd from our ui
+- home screen hero card should show live location, from the device, rather than hardcoded jp nagar, and no hardcoded time, use the devices time
+- the start button in the home screen for the journey app feels wierd, change that, make the ui feel cleaner
+- status screen should show realtime data instead of mock data. update the safety score as and when the sensors give different readings. use live data instead of mock data 
+- the hearbteat, motion, and audio sensor card should be updating in realtime
+- fix maps not being loaded by openstreetmaps, it says we are not compliant with their rules, and thats why the map doesnt load
+- in the map page nearby alerts say 4, and i can only see 3, if theres more than 3 i need to be able to scroll that window. also please fix that the nearby alerts take up half the screen and we cant really see the map behind it.
+- if the device is already connected, show that change in the settings app, instead of asking me to reconnect to something already connected
+- Let Profile information, take the name and phone number which we use when signing up, let that be stored in the database, and then if we change profile information, let that update. let us change fields in the personal information section
+- there shld be an add emergency contacts, in the emergency contacts section of the settings
+- changing the alert permisssions setting, shld change the content of the screen it shows, visually indicating the permisssions change
+- same thing for the privacy and security toggle
+- alert history, whatevers being shown, let that be india specific, let there be a few hardcoded ones, but if i call an sos, then let it reflect that update in the alert history
+- sos splash screen, the numbers are still getting cut off 
+- the ui on the sos active screen is shit, fix that pls, the sending details ui element looks so off with all the different colors
+- the belt connection card on the home page should sync with the belt connection card in settings page
