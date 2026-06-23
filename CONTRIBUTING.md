@@ -14,6 +14,43 @@ We welcome contributions to NARI! Whether you are fixing a bug, adding a feature
    - `fix/calibration-logic`
    - `docs/update-setup-guide`
 
+## ⚙️ Quick Setup
+
+We provide setup scripts to initialize the development environment:
+
+**On Windows (PowerShell):**
+```powershell
+powershell -ExecutionPolicy Bypass -File .\setup.ps1
+```
+
+**On Linux/macOS (Bash):**
+```bash
+chmod +x ./setup.sh
+./setup.sh
+```
+
+These scripts configure a Python virtual environment, install dependencies, and create template environment files.
+
+## 🧪 Running Tests
+
+Before submitting a pull request, run the end-to-end integration test suite to verify onboarding and sensor pipelines:
+
+1. Start the FastAPI backend:
+   ```bash
+   .\.venv\Scripts\python.exe -m uvicorn main:app --app-dir backend --port 8000
+   ```
+2. Start the Expo web frontend (on port 8081):
+   ```bash
+   cd frontend
+   npm run web -- --port 8081
+   ```
+3. Run the E2E Playwright verification script:
+   ```bash
+   .\.venv\Scripts\python.exe scratch/e2e_test.py
+   ```
+
+Make sure the tests run successfully and all assertions pass.
+
 ## 💬 Commit Messages
 
 We use **Conventional Commits** to keep our history readable and automate changelogs. Please format your commit messages as follows:

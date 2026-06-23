@@ -3,7 +3,7 @@ import time
 import numpy as np
 import torch
 import torch.nn.functional as F
-from fastapi import FastAPI, BackgroundTasks, HTTPException, Security, Depends
+from fastapi import FastAPI, BackgroundTasks, HTTPException, Security, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security.api_key import APIKeyHeader
 import sys
@@ -23,6 +23,7 @@ from fusion import compute_safety_score
 from assn_lstm.models.lstm import LSTMClassifier
 from assn_tcn.models.tcn import TCNClassifier
 from firebase_app import db
+from assn_mlp.api_backend import handle_esp32_request, process_payload
 
 app = FastAPI(title="NARI Backend API")
 
@@ -189,6 +190,43 @@ async def get_status_debug():
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
+
+@app.post("/predict")
+async def predict_endpoint(request: Request):
+    # Parse JSON body
+    try:
+        data = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON payload")
+
+    # Validate required fields
+    required = ["hr_bpm", "spo2", "imu", "audio_pcm"]
+    missing = [f for f in required if f not in data]
+    if missing:
+        raise HTTPException(status_code=422, detail=f"Missing required fields: {missing}")
+
+    # Shape validation
+    try:
+        if not isinstance(data["hr_bpm"], list) or len(data["hr_bpm"]) != 10:
+            raise HTTPException(
+                status_code=422,
+                detail=f"hr_bpm must be a list of exactly 10 values, got {len(data.get('hr_bpm', []))}")
+        if (not isinstance(data["imu"], list) or len(data["imu"]) != 200
+                or not isinstance(data["imu"][0], list) or len(data["imu"][0]) != 6):
+            raise HTTPException(status_code=422, detail="imu must be a 200x6 array")
+        if not isinstance(data["audio_pcm"], list) or len(data["audio_pcm"]) != 15360:
+            raise HTTPException(
+                status_code=422,
+                detail=f"audio_pcm must be a list of exactly 15360 values, got {len(data.get('audio_pcm', []))}")
+    except (TypeError, IndexError) as e:
+        raise HTTPException(status_code=422, detail=f"Malformed field shapes: {str(e)}")
+
+    # Run inference in a thread to avoid blocking the async event loop
+    try:
+        result = await asyncio.to_thread(handle_esp32_request, data)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Model inference failed: {str(e)}")
 
 @app.post("/journey/start")
 async def journey_start(req: JourneyStartRequest, api_key: str = Depends(get_api_key)):

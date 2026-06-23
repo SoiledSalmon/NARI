@@ -23,7 +23,7 @@ The NARI backend is a FastAPI application responsible for ingesting sensor data,
 
 ## 🧠 ML Models
 
-NARI utilizes a multimodal deep learning pipeline:
+NARI uses a multimodal deep learning pipeline:
 - **LSTM (Stress Detection):** Processes Heart Rate (HR) and HRV. Trained on the WESAD dataset to identify physiological spikes associated with panic.
 - **TCN (Motion Analysis):** Processes 6-axis IMU data. Trained on the HHAR dataset to detect abnormal struggling, falling, or rapid jerky movements.
 - **Fusion:** A rule-based fusion logic (planned for MLP) combines the model outputs to produce a unified Safety Score (0–100) and discrete states (Safe, Alert, Danger).

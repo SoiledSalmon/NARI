@@ -64,7 +64,7 @@ export type AppTabParamList = {
   [ROUTES.APP.HOME]: undefined;
   [ROUTES.APP.STATUS]: undefined;
   [ROUTES.APP.MAP]: undefined;
-  [ROUTES.APP.SETTINGS]: undefined;
+  [ROUTES.APP.SETTINGS]: { screen?: keyof SettingsStackParamList } | undefined;
 };
 
 export type SettingsStackParamList = {

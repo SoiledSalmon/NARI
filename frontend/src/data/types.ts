@@ -161,6 +161,9 @@ export interface UserProfile {
   language: 'en' | 'kn';
   onboardingComplete: boolean;
   createdAt: number;
+  alertSensitivity?: 'low' | 'medium' | 'high';
+  silentMode?: boolean;
+  locationSharing?: boolean;
 }
 
 /* ─────────── Alert Received (responder view) ─────────── */

@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
-import { ROUTES, RootStackParamList } from '../../navigation/routes';
+import { ROUTES, RootStackParamList, AppTabParamList } from '../../navigation/routes';
 import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { useSensorStore } from '../../stores/sensorStore';
@@ -62,7 +62,7 @@ const SIGNAL_COLORS: Record<string, string> = {
 
 export default function HomeScreen() {
   const { t } = useTranslation();
-  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const navigation = useNavigation<NavigationProp<RootStackParamList & AppTabParamList>>();
   const status = useSensorStore((s) => s.status);
   const setStatus = useSensorStore((s) => s.setStatus);
   const { recentAlerts, setRecentAlerts } = useAlertStore();

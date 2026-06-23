@@ -43,7 +43,7 @@ To switch between mock and live data, toggle `USE_MOCK_DATA` in `dataConfig.ts`.
 ## 🎨 UI & Theming
 - Uses **NativeWind v4** for layout styling.
 - Colors and typography intent are centralized in `src/theme/`.
-- The `StatusBackground` component reads global state and seamlessly transitions the screen environment (colors, haptics) between Safe, Warning, and Danger.
+- The `StatusBackground` component reads global state and smoothly transitions the screen environment (colors, haptics) between Safe, Warning, and Danger.
 
 ## 🛠️ Testing
 The UI enforces strict accessibility guidelines:
