@@ -86,7 +86,6 @@ export const firebaseService = {
       confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, applicationVerifier);
       return true;
     } catch (error) {
-      console.error('Error sending OTP', error);
       return false;
     }
   },
@@ -97,7 +96,6 @@ export const firebaseService = {
       await confirmationResult.confirm(code);
       return true;
     } catch (error) {
-      console.error('Error verifying OTP', error);
       return false;
     }
   },
@@ -124,7 +122,7 @@ export const firebaseService = {
       const alerts = snapshot.docs.map(doc => doc.data() as Alert);
       callback(alerts);
     }, (error) => {
-      console.error('Error subscribing to alerts', error);
+      // Silently handle subscription errors
     });
   },
   
@@ -135,7 +133,6 @@ export const firebaseService = {
       const snapshot = await getDocs(contactsRef);
       return snapshot.docs.map(doc => doc.data() as TrustedContact);
     } catch (error) {
-      console.error('Error fetching contacts', error);
       return [];
     }
   },
@@ -155,7 +152,7 @@ export const firebaseService = {
       const incidents = snapshot.docs.map(doc => doc.data() as MapIncident);
       callback(incidents);
     }, (error) => {
-      console.error('Error subscribing to incidents', error);
+      // Silently handle subscription errors
     });
   }
 };

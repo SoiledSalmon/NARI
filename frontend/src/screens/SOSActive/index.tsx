@@ -22,9 +22,17 @@ import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { spacing, radii, shadows } from '../../theme/spacing';
 import { useAuthStore } from '../../stores/authStore';
+import { useContactStore } from '../../stores/contactStore';
 
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:8000';
-const API_KEY = process.env.EXPO_PUBLIC_API_SECRET_KEY || 'your-secret-key-here';
+const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+const API_KEY = process.env.EXPO_PUBLIC_API_SECRET_KEY;
+
+if (!BACKEND_URL || !API_KEY) {
+  throw new Error(
+    'Missing required environment variables: EXPO_PUBLIC_BACKEND_URL and EXPO_PUBLIC_API_SECRET_KEY. ' +
+    'Ensure .env is properly configured. See .env.example for template.'
+  );
+}
 
 type Props = NativeStackScreenProps<RootStackParamList, 'SOSActive'>;
 
@@ -66,12 +74,29 @@ const CHIP_STYLE = {
 export default function SOSActiveScreen({ navigation }: Props) {
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
+  const userContacts = useContactStore((s) => s.contacts);
   const [showFalseAlarmDialog, setShowFalseAlarmDialog] = useState(false);
-  const [contacts, setContacts] = useState<ContactGroup[]>([
-    { label: t('sos.emergencyContacts'), status: 'sent' },
-    { label: t('sos.localAuthorities'), status: 'sending' },
-    { label: t('sos.campusSecurity'), status: 'failed' },
-  ]);
+  
+  // Build contact groups from actual user contacts
+  const [contacts, setContacts] = useState<ContactGroup[]>([]);
+
+  useEffect(() => {
+    // Initialize with user's actual emergency contacts
+    if (userContacts.length > 0) {
+      setContacts(
+        userContacts.map((c) => ({
+          label: c.name,
+          status: 'sent' as const,
+        }))
+      );
+    } else {
+      // Fallback if no contacts added
+      setContacts([
+        { label: t('sos.noEmergencyContacts'), status: 'pending' },
+      ]);
+    }
+  }, [userContacts, t]);
+
   const hasFailedDelivery = contacts.some((group) => group.status === 'failed');
   const pulse = useSharedValue(0);
 
@@ -109,7 +134,7 @@ export default function SOSActiveScreen({ navigation }: Props) {
           body: JSON.stringify({ userId: user.id }),
         });
       } catch (err) {
-        console.warn('Failed to cancel SOS on backend', err);
+        // Silently handle backend errors; focus on local state
       }
     }
     navigation.goBack();

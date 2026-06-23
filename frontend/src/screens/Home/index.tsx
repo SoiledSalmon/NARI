@@ -1,8 +1,8 @@
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { useNavigation } from '@react-navigation/native';
-import { ROUTES } from '../../navigation/routes';
+import { useNavigation, NavigationProp } from '@react-navigation/native';
+import { ROUTES, RootStackParamList } from '../../navigation/routes';
 import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { useSensorStore } from '../../stores/sensorStore';
@@ -15,8 +15,15 @@ import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { spacing, radii, shadows, minTouchable } from '../../theme/spacing';
 
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:8000';
-const API_KEY = process.env.EXPO_PUBLIC_API_SECRET_KEY || 'your-secret-key-here';
+const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+const API_KEY = process.env.EXPO_PUBLIC_API_SECRET_KEY;
+
+if (!BACKEND_URL || !API_KEY) {
+  throw new Error(
+    'Missing required environment variables: EXPO_PUBLIC_BACKEND_URL and EXPO_PUBLIC_API_SECRET_KEY. ' +
+    'Ensure .env is properly configured. See .env.example for template.'
+  );
+}
 
 const STATUS_CONFIG = {
   safe: {
@@ -55,14 +62,23 @@ const SIGNAL_COLORS: Record<string, string> = {
 
 export default function HomeScreen() {
   const { t } = useTranslation();
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const status = useSensorStore((s) => s.status);
   const setStatus = useSensorStore((s) => s.setStatus);
   const { recentAlerts, setRecentAlerts } = useAlertStore();
   const journeyActive = useJourneyStore((s) => s.isActive);
+  const journeyStartedAt = useJourneyStore((s) => s.startedAt);
   const startJourney = useJourneyStore((s) => s.startJourney);
   const user = useAuthStore((s) => s.user);
   const contacts = useContactStore((s) => s.contacts);
+
+  // Helper: format elapsed time in minutes and seconds
+  const formatElapsedTime = (startMs: number | null): string => {
+    if (!startMs) return '0 min';
+    const elapsedMs = Date.now() - startMs;
+    const minutes = Math.floor(elapsedMs / 60000);
+    return `${minutes} min`;
+  };
 
   useEffect(() => {
     const unsubscribe = dataProvider.subscribeToStatus(setStatus);
@@ -80,9 +96,17 @@ export default function HomeScreen() {
   const connected = Boolean(connectivity?.ble);
   const hasLocation = connectivity?.gps !== false;
   const heroTitle = connected ? t(`home.${level}Status`) : t('home.deviceBanner');
+  
+  // Format current time for display
+  const currentTime = new Date().toLocaleTimeString('en-US', { 
+    hour: '2-digit', 
+    minute: '2-digit',
+    hour12: true 
+  });
+  
   const heroSubtitle = connected
     ? hasLocation
-      ? 'JP Nagar · 11:42 PM'
+      ? `Current location · ${currentTime}`
       : 'Location unavailable'
     : t('home.deviceBannerSubtitle');
 
@@ -109,7 +133,7 @@ export default function HomeScreen() {
           }),
         });
       } catch (err) {
-        console.warn('Failed to start journey on backend', err);
+        // Silently handle backend errors; focus on local state
       }
     }
   };
@@ -235,10 +259,10 @@ export default function HomeScreen() {
         <Card style={[styles.journeyCard, styles.journeyActiveCard]}>
           <View style={styles.journeyActiveTop}>
             <Badge label={t('home.journeyActive')} preset="nari" />
-            <Text style={styles.journeyActiveTime}>12 min</Text>
+            <Text style={styles.journeyActiveTime}>{formatElapsedTime(journeyStartedAt)}</Text>
           </View>
           <Text style={styles.journeyTitle} numberOfLines={2}>
-            Journey mode is active
+            {t('home.journeyActiveTitle') || 'Journey in progress'}
           </Text>
           <Text style={styles.journeySubtitle} numberOfLines={4}>
             {t('home.journeyWatching', { contacts: contacts.length > 0 ? contacts.map(c => c.name).join(', ') : 'No contacts' })}

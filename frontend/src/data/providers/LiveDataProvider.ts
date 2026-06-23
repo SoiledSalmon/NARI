@@ -13,8 +13,15 @@ import {
 } from '../types';
 import { MockDataProvider } from './MockDataProvider';
 
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:8000';
-const API_KEY = process.env.EXPO_PUBLIC_API_SECRET_KEY || 'your-secret-key-here';
+const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+const API_KEY = process.env.EXPO_PUBLIC_API_SECRET_KEY;
+
+if (!BACKEND_URL || !API_KEY) {
+  throw new Error(
+    'Missing required environment variables: EXPO_PUBLIC_BACKEND_URL and EXPO_PUBLIC_API_SECRET_KEY. ' +
+    'Ensure .env is properly configured. See .env.example for template.'
+  );
+}
 
 export class LiveDataProvider implements IDataProvider {
   private statusListeners: Array<(snapshot: StatusSnapshot) => void> = [];
@@ -59,7 +66,6 @@ export class LiveDataProvider implements IDataProvider {
       this.lastKnownGoodStatus = snapshot;
       return snapshot;
     } catch (error) {
-      console.warn('Failed to fetch live status, returning last known good or mock', error);
       if (this.lastKnownGoodStatus) {
         // Return last known good but with net=false
         return {

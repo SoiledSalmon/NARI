@@ -10,7 +10,10 @@ The ESP32-S3 firmware responsible for reading biometric and motion data, evaluat
    - `SparkFun MAX3010x Pulse and Proximity Sensor Library` (for MAX30105.h)
    - `MPU9250_WE` (by Wolfgang Ewald, provides MPU6500_WE.h)
    - `ArduinoJson` (**IMPORTANT:** Must be version 6.x, not v7).
-4. Configure Wi-Fi credentials in the source code (or move to a local uncommitted `secrets.h`).
+4. **Configure credentials:**
+   - Copy `secrets.h.example` to `secrets.h` (this file is in `.gitignore` and will never be committed)
+   - Fill in your WiFi SSID, password, backend URL, and API key
+   - **Never commit `secrets.h` to version control**
 5. Select your ESP32-S3 board and upload.
 
 ## 🔌 Sensor Wiring (ESP32-S3 WROOM-1)

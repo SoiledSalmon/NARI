@@ -15,8 +15,15 @@ import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { spacing, radii } from '../../theme/spacing';
 
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:8000';
-const API_KEY = process.env.EXPO_PUBLIC_API_SECRET_KEY || 'your-secret-key-here';
+const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+const API_KEY = process.env.EXPO_PUBLIC_API_SECRET_KEY;
+
+if (!BACKEND_URL || !API_KEY) {
+  throw new Error(
+    'Missing required environment variables: EXPO_PUBLIC_BACKEND_URL and EXPO_PUBLIC_API_SECRET_KEY. ' +
+    'Ensure .env is properly configured. See .env.example for template.'
+  );
+}
 
 const STATUS_COPY: Record<string, string> = {
   safe: 'Safe',
@@ -40,8 +47,8 @@ export default function StatusScreen() {
   const isLoading = useSensorStore((s) => s.isLoading);
   const error = useSensorStore((s) => s.error);
   const setStatus = useSensorStore((s) => s.setStatus);
-  const technicalView = useSettingsStore((s) => s.silentMode); // currently overloaded
-  const setTechnicalView = useSettingsStore((s) => s.setSilentMode);
+  const technicalView = useSettingsStore((s) => s.technicalView);
+  const setTechnicalView = useSettingsStore((s) => s.setTechnicalView);
   const [waitingTooLong, setWaitingTooLong] = useState(false);
   const [debugData, setDebugData] = useState<DebugSnapshot | null>(null);
 
@@ -62,7 +69,7 @@ export default function StatusScreen() {
           setDebugData(data);
         }
       } catch (err) {
-        console.warn('Debug fetch failed', err);
+        // Silently handle debug data fetch failures
       }
     }, 1500);
 

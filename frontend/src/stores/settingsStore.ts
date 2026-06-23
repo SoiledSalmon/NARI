@@ -9,12 +9,14 @@ interface SettingsState {
   alertSensitivity: 'low' | 'medium' | 'high';
   silentMode: boolean;
   locationSharing: boolean;
+  technicalView: boolean; // Debug/technical information display
 
   setDevice: (device: DeviceState) => void;
   setLanguage: (lang: 'en' | 'kn') => void;
   setAlertSensitivity: (s: 'low' | 'medium' | 'high') => void;
   setSilentMode: (silent: boolean) => void;
   setLocationSharing: (sharing: boolean) => void;
+  setTechnicalView: (view: boolean) => void;
 }
 
 export const useSettingsStore = create<SettingsState>((set) => ({
@@ -23,6 +25,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   alertSensitivity: 'medium',
   silentMode: false,
   locationSharing: true,
+  technicalView: false,
 
   setDevice: (device) => set({ device }),
   
@@ -35,18 +38,26 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   setAlertSensitivity: (alertSensitivity) => {
     set({ alertSensitivity });
     const user = useAuthStore.getState().user;
-    if (user?.id) firebaseService.updateUserProfile(user.id, { alertSensitivity } as any);
+    if (user?.id) {
+      firebaseService.updateUserProfile(user.id, { alertSensitivity });
+    }
   },
   
   setSilentMode: (silentMode) => {
     set({ silentMode });
     const user = useAuthStore.getState().user;
-    if (user?.id) firebaseService.updateUserProfile(user.id, { silentMode } as any);
+    if (user?.id) {
+      firebaseService.updateUserProfile(user.id, { silentMode });
+    }
   },
   
   setLocationSharing: (locationSharing) => {
     set({ locationSharing });
     const user = useAuthStore.getState().user;
-    if (user?.id) firebaseService.updateUserProfile(user.id, { locationSharing } as any);
+    if (user?.id) {
+      firebaseService.updateUserProfile(user.id, { locationSharing });
+    }
   },
+
+  setTechnicalView: (technicalView) => set({ technicalView }),
 }));
