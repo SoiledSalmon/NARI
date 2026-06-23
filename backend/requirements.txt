@@ -1,0 +1,12 @@
+fastapi==0.138.0
+firebase-admin==7.4.0
+pydantic==2.13.4
+python-dotenv==1.2.2
+numpy==1.26.4
+torch==2.12.1
+uvicorn==0.49.0
+tensorflow==2.16.1
+tensorflow-hub>=0.16.1
+librosa>=0.10.1
+sounddevice>=0.4.6
+soundfile>=0.12.1

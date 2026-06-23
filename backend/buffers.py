@@ -27,6 +27,15 @@ class GlobalState:
         self.lock = asyncio.Lock()
 
     async def ingest(self, payload):
+        """
+        Appends raw sensor readings from an IngestPayload to the rolling queues.
+
+        Parameters:
+            payload (IngestPayload): Received sensor payload containing 10 IMU samples, heart rate, and inter-beat interval.
+
+        Side Effects:
+            Appends values to `tcn_buffer`, `acc_buffer`, `hr_buffer`, and `ibi_buffer` and updates `last_ingest_time`. Truncates buffers to maintain rolling window limits.
+        """
         async with self.lock:
             # 1. Update TCN and ACC buffer
             for sample in payload.imu:
@@ -55,6 +64,17 @@ class GlobalState:
             self.last_ingest_time = time.time()
             
     async def extract_lstm_feature_window(self) -> Optional[np.ndarray]:
+        """
+        Extracts mathematical features over a 60-second physiological window.
+
+        Returns:
+            np.ndarray or None: An 8-dimensional feature vector containing:
+                [mean_hr, rmssd, mean_eda, eda_slope, mean_temp, temp_delta, sma, hr_std]
+                or None if buffers are not yet fully populated (less than 300 HR samples or 3000 ACC samples).
+
+        Side Effects:
+            None.
+        """
         async with self.lock:
             if len(self.hr_buffer) < 300 or len(self.acc_buffer) < 3000:
                 return None  # Not enough data for a 60s window
@@ -90,17 +110,38 @@ class GlobalState:
             return np.array([mean_hr, rmssd, mean_eda, eda_slope, mean_temp, temp_delta, sma, hr_std], dtype=np.float32)
 
     async def update_lstm_windows(self, feature_vector: np.ndarray):
+        """
+        Appends a physiological feature vector to the rolling LSTM inputs buffer.
+
+        Parameters:
+            feature_vector (np.ndarray): The 8-dimensional feature array to append.
+
+        Side Effects:
+            Appends `feature_vector` to `lstm_windows` and clips the history to the latest 10 windows.
+        """
         async with self.lock:
             self.lstm_windows.append(feature_vector)
             if len(self.lstm_windows) > 10:
                 self.lstm_windows = self.lstm_windows[-10:]
 
     def get_tcn_input(self) -> Optional[np.ndarray]:
+        """
+        Constructs the inputs array for TCN motion inference.
+
+        Returns:
+            np.ndarray or None: NumPy array of shape (160, 6) or None if buffer has fewer than 160 samples.
+        """
         if len(self.tcn_buffer) == 160:
             return np.array(self.tcn_buffer, dtype=np.float32)
         return None
         
     def get_lstm_input(self) -> Optional[np.ndarray]:
+        """
+        Constructs the inputs array for LSTM stress inference.
+
+        Returns:
+            np.ndarray or None: NumPy array of shape (10, 8) or None if buffer has fewer than 10 feature windows.
+        """
         if len(self.lstm_windows) == 10:
             return np.stack(self.lstm_windows)
         return None

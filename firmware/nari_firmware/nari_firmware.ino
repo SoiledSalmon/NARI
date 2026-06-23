@@ -144,8 +144,10 @@ void setup() {
     // init() checks the WHO_AM_I register (expects 0x70 for MPU6500).
     // If it fails: check SDA=8 SCL=9 wiring, 3.3V power, and pull-up
     // resistors (4.7kΩ to 3.3V on both SDA and SCL).
-    Serial.println("ERROR: MPU6500 not found. Check wiring on SDA=8, SCL=9.");
-    while (1);
+    while (1) {
+      Serial.println("ERROR: MPU6500 not found. Check wiring on SDA=8, SCL=9.");
+      delay(5000);
+    }
   }
 
   // Keep the device still for ~1s during auto-calibration

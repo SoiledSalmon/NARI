@@ -6,6 +6,15 @@ from dotenv import load_dotenv
 load_dotenv()
 
 def initialize_firebase():
+    """
+    Initializes the Firebase Admin SDK using credentials from environment variables.
+
+    Returns:
+        firestore.client or None: An initialized Firestore client, or None if credentials are missing/invalid.
+
+    Side Effects:
+        Loads Firebase certificate credentials, registers a new Firebase Admin app instance, and establishes connection to Firestore.
+    """
     if not firebase_admin._apps:
         cred_path = os.getenv("FIREBASE_CREDENTIALS_PATH")
         if cred_path and os.path.exists(cred_path):

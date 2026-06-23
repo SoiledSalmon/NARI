@@ -2,10 +2,19 @@ import numpy as np
 
 def compute_safety_score(lstm_probs: np.ndarray, tcn_probs: np.ndarray) -> tuple[int, str]:
     """
-    Rule-based fusion to produce a safety score (0-100) and level ('safe', 'alert', 'danger').
-    
-    lstm_probs: [prob_baseline, prob_stress]
-    tcn_probs: [prob_activity_0, ..., prob_activity_5]
+    Runs rule-based late fusion on biological stress and motion probabilities.
+
+    Parameters:
+        lstm_probs (np.ndarray): Probability distribution from LSTM branch of shape (2,) -> [prob_baseline, prob_stress]
+        tcn_probs (np.ndarray): Probability distribution from TCN branch of shape (6,) -> [prob_activity_0, ..., prob_activity_5]
+
+    Returns:
+        tuple[int, str]: A pair of (safety_score, safety_level):
+            - safety_score (int): Range [0, 100], where lower means higher danger.
+            - safety_level (str): One of 'safe', 'alert', 'danger'.
+
+    Side Effects:
+        None.
     """
     score = 100
     
