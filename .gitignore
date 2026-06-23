@@ -22,7 +22,9 @@ frontend/*.mobileprovision
 # ==========================================
 # Backend (Python / FastAPI)
 # ==========================================
-backend/__pycache__/
+__pycache__/
+*.pyc
+*.pyo
 backend/venv/
 backend/env/
 backend/.pytest_cache/
@@ -77,3 +79,23 @@ npm-debug.*
 yarn-debug.*
 yarn-error.*
 *.tsbuildinfo
+.venv/
+venv/
+payload.json
+
+# ==========================================
+# Model weights and checkpoints
+# ==========================================
+*.pt
+*.pth
+*.ckpt
+*.h5
+*.keras
+*.bin
+*.onnx
+*.pb
+*.safetensors
+*.npz
+*.pkl
+*.joblib
+
