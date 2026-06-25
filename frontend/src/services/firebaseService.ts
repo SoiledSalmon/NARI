@@ -34,13 +34,17 @@ export const firebaseConfig = {
   appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
 };
 
-import firebase from 'firebase/compat/app';
+export const isFirebaseConfigured = !!(
+  firebaseConfig.apiKey &&
+  firebaseConfig.apiKey !== 'your-firebase-api-key' &&
+  !firebaseConfig.apiKey.startsWith('your-')
+);
 
 let app: FirebaseApp;
 let auth: ReturnType<typeof getAuth>;
 
-if (!firebase.apps.length) {
-  app = firebase.initializeApp(firebaseConfig) as any;
+if (!getApps().length) {
+  app = initializeApp(firebaseConfig);
   auth = getAuth(app);
 } else {
   app = getApp();
@@ -52,6 +56,8 @@ export const db = getFirestore(app);
 
 // State for OTP
 let confirmationResult: ConfirmationResult | null = null;
+let lastPhoneNumber: string | null = null;
+let lastUserName: string | null = null;
 
 export const firebaseService = {
   _authCallback: null as ((user: UserProfile | null) => void) | null,
@@ -85,11 +91,21 @@ export const firebaseService = {
     });
   },
 
-  sendOTP: async (phoneNumber: string, applicationVerifier: ApplicationVerifier): Promise<boolean> => {
+  sendOTP: async (phoneNumber: string, applicationVerifier?: ApplicationVerifier, name?: string): Promise<boolean> => {
+    lastPhoneNumber = phoneNumber;
+    if (name) {
+      lastUserName = name;
+    }
+    if (!isFirebaseConfigured) {
+      // Simulate network request delay
+      await new Promise(resolve => setTimeout(resolve, 800));
+      return true;
+    }
     if (phoneNumber === '+919999999999' || phoneNumber === '+16505553434') {
       return true;
     }
     try {
+      if (!applicationVerifier) return false;
       confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, applicationVerifier);
       return true;
     } catch (error) {
@@ -98,6 +114,24 @@ export const firebaseService = {
   },
 
   verifyOTP: async (code: string): Promise<boolean> => {
+    if (!isFirebaseConfigured) {
+      if (code === '123456') {
+        const mockUser: UserProfile = {
+          id: 'mock-user-id-' + (lastPhoneNumber ? lastPhoneNumber.replace(/\D/g, '') : '9999'),
+          name: lastUserName || 'Mock Test User',
+          phone: lastPhoneNumber || '+919999999999',
+          language: 'en',
+          onboardingComplete: false,
+          createdAt: Date.now()
+        };
+        if (firebaseService._authCallback) {
+          firebaseService._authCallback(mockUser);
+        }
+        return true;
+      }
+      return false;
+    }
+
     if (code === '123456') {
       const mockUser: UserProfile = {
         id: 'mock-user-id-9999',
@@ -122,12 +156,20 @@ export const firebaseService = {
   },
 
   logout: async () => {
-    await signOut(auth);
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.warn("Failed to sign out from Firebase Auth:", error);
+    }
   },
 
   updateUserProfile: async (userId: string, data: Partial<UserProfile>) => {
-    const userRef = doc(db, 'users', userId);
-    await setDoc(userRef, data, { merge: true });
+    try {
+      const userRef = doc(db, 'users', userId);
+      await setDoc(userRef, data, { merge: true });
+    } catch (error) {
+      console.warn("Failed to update user profile in Firestore (running in offline/mock mode):", error);
+    }
   },
 
   // Alerts
@@ -159,8 +201,12 @@ export const firebaseService = {
   },
   
   addContact: async (userId: string, contact: TrustedContact) => {
-    const contactRef = doc(db, 'users', userId, 'contacts', contact.id);
-    await setDoc(contactRef, contact);
+    try {
+      const contactRef = doc(db, 'users', userId, 'contacts', contact.id);
+      await setDoc(contactRef, contact);
+    } catch (error) {
+      console.warn("Failed to add contact in Firestore (running in offline/mock mode):", error);
+    }
   },
 
   // Map Incidents

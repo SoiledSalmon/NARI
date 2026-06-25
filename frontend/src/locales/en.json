@@ -46,7 +46,8 @@
     "signInSubmit": "Sign In →",
     "switchToSignIn": "Already have an account? Sign In",
     "switchToCreate": "New here? Create Account",
-    "recaptchaLoading": "Verifying you're human..."
+    "recaptchaLoading": "Verifying you're human...",
+    "sendOtpError": "Failed to send verification code. Please check your phone number and try again."
   },
   "otp": {
     "title": "Verify it's you",

@@ -1,368 +1,589 @@
 // =============================================================
-// nari_firmware.ino
-// Board  : ESP32-S3 Wroom-1 (edgehax)
-// Sensors: MAX30102 (HR/IBI) + MPU6500 (IMU) + Microphone
-// Backend: POST /ingest  — { userId, hr, ibi, imu[10] }
-// =============================================================
+// nari_firmware_wifi.ino
+// Board  : ESP32-S3 Wroom-1
+// Sensors: MAX30102 (HR/SpO2) + MPU6050 (IMU) + Microphone
+// Backend: POST /ingest — chunked JSON over WiFi
+//          + Serial analysis report (printAnalysis)
+//
+// WiFi transport ported from nari_firmware_merged.ino.
+// Original MPU6050 / analysis logic preserved verbatim.
 //
 // LIBRARY MANAGER — install these:
 //   1. "SparkFun MAX3010x Pulse and Proximity Sensor Library"
-//      (search: MAX3010x)  →  provides MAX30105.h + heartRate.h
-//   2. "MPU9250_WE" by Wolfgang Ewald
-//      (search: MPU9250_WE) →  provides MPU6500_WE.h
-//   3. "ArduinoJson" by Benoit Blanchon
-//      (search: ArduinoJson) →  install v6.x ONLY, NOT v7
-//   WiFi.h / HTTPClient.h / Wire.h are built into the ESP32 core.
+//      (search: MAX3010x) → MAX30105.h + heartRate.h + spo2_algorithm.h
+//   2. "MPU6050" by Electronic Cats (or i2cdevlib)
+//      (search: MPU6050) → MPU6050.h
+//   3. WiFi.h / HTTPClient.h / Wire.h / WiFiClient.h — ESP32 core
 //
+// Create a secrets.h in the same sketch folder:
+//   #pragma once
+//   #define WIFI_SSID    "your_ssid"
+//   #define WIFI_PASS    "your_password"
+//   #define BACKEND_URL  "http://192.168.x.x:PORT/ingest"
+//   #define API_KEY      "your_api_key"
 // =============================================================
-
-// *** IMPORTANT: ArduinoJson v6.x ONLY ***
-// StaticJsonDocument is v6 syntax. v7 replaced it with JsonDocument
-// and will throw compile errors on this file. Pin to 6.x in
-// Library Manager (latest is 6.21.x as of 2025).
 
 #include <WiFi.h>
-#include <HTTPClient.h>
+#include <WiFiClient.h>
 #include <Wire.h>
-#include <ArduinoJson.h>    // v6.x only — see note above
-#include "MAX30105.h"        // SparkFun MAX3010x library
-#include "heartRate.h"       // Bundled with SparkFun MAX3010x
-#include <MPU6500_WE.h>      // Part of MPU9250_WE library by Wolfgang Ewald
+#include <MPU6050.h>
+#include "MAX30105.h"
+#include "heartRate.h"
+#include "spo2_algorithm.h"
+#include "secrets.h"   // WIFI_SSID, WIFI_PASS, BACKEND_URL, API_KEY
 
-#include "secrets.h"
+// ─── Pins ─────────────────────────────────────
+#define MPU_SDA  8
+#define MPU_SCL  9
+#define MIC_PIN  4
 
-// =============================================================
-// PIN DEFINITIONS  (ESP32-S3 Wroom-1)
-// SDA=8, SCL=9 as wired. Both sensors share the same I2C bus.
-// MPU6500 I2C address: 0x68
-// MAX30102 I2C address: 0x57  — no conflict
-// =============================================================
-#define SDA_PIN  8
-#define SCL_PIN  9
-#define MIC_PIN  4   // Analog mic on GPIO4
+// ─── Sensors ──────────────────────────────────
+MPU6050  mpu;
+MAX30105 particleSensor;
 
-// =============================================================
-// SENSOR OBJECTS
-// =============================================================
-#define MPU6500_ADDR 0x68
-MPU6500_WE  myMPU6500(MPU6500_ADDR);
-MAX30105    particleSensor;
+// ─── HR ───────────────────────────────────────
+const byte RATE_SIZE = 8;
+byte  rates[RATE_SIZE];
+byte  rateSpot       = 0;
+long  lastBeat       = 0;
+float beatsPerMinute = 0;
+int   beatAvg        = 0;
 
-// =============================================================
-// SAMPLING CONFIG
-// =============================================================
-const int          SAMPLE_RATE_HZ      = 50;
-const int          BATCH_SIZE          = 10;
-const unsigned long SAMPLE_INTERVAL_MS = 1000 / SAMPLE_RATE_HZ;  // 20ms
+// ─── SpO2 ─────────────────────────────────────
+uint32_t irBuffer[100];
+uint32_t redBuffer[100];
+int32_t  spo2_calc           = 0;
+int8_t   validSPO2           = 0;
+int32_t  heartRate_spo2      = 0;
+int8_t   validHeartRate_spo2 = 0;
+int      spo2_value          = 97;
 
-// =============================================================
-// HEART RATE STATE
-// =============================================================
-const byte RATE_SIZE     = 4;
-byte       rates[RATE_SIZE];
-byte       rateSpot      = 0;
-long       lastBeat      = 0;
-float      beatsPerMinute = 75.0;
-int        beatAvg       = 75;
-float      currentIBI    = 800.0;
-bool       fingerDetected  = false;
-bool       max30102Present = false;  // set in setup(); HR code skipped if false
+// ─── Buffers ──────────────────────────────────
+float   hr_buffer[10];
+int     hr_index = 0;
 
-// =============================================================
-// IMU BATCH BUFFER
-// =============================================================
-struct ImuSample {
-  float ax, ay, az;
-  float gx, gy, gz;
-};
-ImuSample    imuBatch[BATCH_SIZE];
-int          batchIndex      = 0;
-unsigned long lastSampleTime = 0;
+float   imu_buffer[200][6];
+int     imu_index = 0;
 
-// =============================================================
-// MICROPHONE
-// Sampled once per batch using a dedicated 50ms blocking window,
-// matching the original sensor test sketch exactly.
-// A 200ms rolling window accumulates ADC noise across hundreds of
-// reads and easily exceeds the scream threshold even in silence.
-// A tight 50ms window gives a stable, comparable reading.
-// NOT in the backend payload — local emergency alerts only.
-// =============================================================
-int  peakToPeak = 0;
+int16_t audio_buffer[15360];
 
-#define NORMAL_SOUND 40
-#define LOUD_SOUND   120
-#define SCREAM_SOUND 250
+// ─── Timers ───────────────────────────────────
+unsigned long lastIMU_ms  = 0;
+unsigned long lastHRStore = 0;
+unsigned long lastSend_ms = 0;
 
-// IMU thresholds for local emergency detection
-#define FALL_THRESHOLD   0.4f
-#define IMPACT_THRESHOLD 2.5f
-#define SHAKE_THRESHOLD  3.5f
+// ─── IMU scale factors ────────────────────────
+const float ACCEL_SCALE = 16384.0;
+const float GYRO_SCALE  = 131.0;
 
-// Last batch's final IMU sample — used in local alert check
-// (avoids a redundant I2C read inside checkLocalAlerts)
-float lastAx, lastAy, lastAz;
-float lastGx, lastGy, lastGz;
+// ─── Audio ────────────────────────────────────
+#define SAMPLE_DELAY_US 56
 
-// =============================================================
-// FORWARD DECLARATIONS
-// =============================================================
+// ─── Chunked HTTP ─────────────────────────────
+#define CHUNK_BUF_SIZE 256
+static char       chunkBuf[CHUNK_BUF_SIZE];
+static int        chunkLen  = 0;
+static WiFiClient* g_client = nullptr;
+
+// ─── Forward declarations ─────────────────────
 void reconnectWiFi();
-void sendBatch();
-void checkLocalAlerts();
+void sendPayloadChunked();
+void readHR();
+void readIMU();
+void updateSpO2();
+void captureAudio();
+void printAnalysis();
+float getAvgHR();
+float getPeakAccelG();
+float getPeakGyroMag();
+float getAudioRMS();
+static void flushChunk();
+static inline void emitChar(char c);
+static void emitStr(const char* s);
+static void emitFloat(float v, int decimals);
 
-// =============================================================
-// SETUP
-// =============================================================
+// ══════════════════════════════════════════════
 void setup() {
-  Serial.begin(115200);
-  delay(500);
+    Serial.begin(115200);
+    delay(1000);
 
-  // ── I2C ──────────────────────────────────────────────────
-  // Must be called before any sensor init so both libraries
-  // inherit the correct SDA/SCL pins from the Wire object.
-  Wire.begin(SDA_PIN, SCL_PIN);
+    Wire.begin(MPU_SDA, MPU_SCL);
 
-  // ── Microphone ───────────────────────────────────────────
-  analogReadResolution(12);          // 0–4095
-  analogSetAttenuation(ADC_11db);    // Full 0–3.3V range
-  pinMode(MIC_PIN, INPUT);
-
-  // ── WiFi ─────────────────────────────────────────────────
-  WiFi.begin(WIFI_SSID, WIFI_PASS);
-  Serial.print("Connecting to WiFi");
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
-  Serial.print("\nWiFi connected — IP: ");
-  Serial.println(WiFi.localIP());
-
-  // ── MPU6500 ──────────────────────────────────────────────
-  Serial.println("Initializing MPU6500...");
-  if (!myMPU6500.init()) {
-    // init() checks the WHO_AM_I register (expects 0x70 for MPU6500).
-    // If it fails: check SDA=8 SCL=9 wiring, 3.3V power, and pull-up
-    // resistors (4.7kΩ to 3.3V on both SDA and SCL).
-    while (1) {
-      Serial.println("ERROR: MPU6500 not found. Check wiring on SDA=8, SCL=9.");
-      delay(5000);
+    // ── WiFi ──────────────────────────────────
+    WiFi.begin(WIFI_SSID, WIFI_PASS);
+    Serial.print("Connecting to WiFi");
+    while (WiFi.status() != WL_CONNECTED) {
+        delay(500);
+        Serial.print(".");
     }
-  }
+    Serial.print("\nWiFi connected — IP: ");
+    Serial.println(WiFi.localIP());
 
-  // Keep the device still for ~1s during auto-calibration
-  Serial.println("Calibrating MPU6500 — hold device still...");
-  delay(1000);
-  myMPU6500.autoOffsets();            // Zero out resting offsets
-  myMPU6500.enableGyrDLPF();          // Digital low-pass filter on gyro
-  myMPU6500.setGyrDLPF(MPU6500_DLPF_6);
-  myMPU6500.setSampleRateDivider(5);  // 1kHz ÷ (5+1) ≈ 166Hz internal; we poll at 50Hz
-  myMPU6500.setGyrRange(MPU6500_GYRO_RANGE_500);   // ±500 deg/s
-  myMPU6500.setAccRange(MPU6500_ACC_RANGE_4G);      // ±4g
-  Serial.println("MPU6500 ready.");
+    // ── MAX30102 ──────────────────────────────
+    if (!particleSensor.begin(Wire, I2C_SPEED_FAST)) {
+        Serial.println("MAX30102 not found! Check wiring.");
+        while (1);
+    }
+    particleSensor.setup(60, 4, 2, 100, 411, 4096);
+    Serial.println("MAX30102 ready");
 
-  // ── MAX30102 ─────────────────────────────────────────────
-  Serial.println("Initializing MAX30102...");
-  if (!particleSensor.begin(Wire, I2C_SPEED_FAST)) {
-    Serial.println("WARNING: MAX30102 not found — continuing without HR/IBI.");
-    Serial.println("hr and ibi will be sent as 0.0 in every payload.");
-    max30102Present = false;
-  } else {
-    particleSensor.setup();
-    particleSensor.setPulseAmplitudeRed(0x0A);
-    particleSensor.setPulseAmplitudeGreen(0);
-    max30102Present = true;
-    Serial.println("MAX30102 ready.");
-  }
+    // ── MPU6050 ───────────────────────────────
+    mpu.initialize();
+    if (mpu.testConnection())
+        Serial.println("MPU6050 ready");
+    else
+        Serial.println("MPU6050 FAILED");
 
-  Serial.println("\nStarting data collection.");
+    // ── Microphone ────────────────────────────
+    pinMode(MIC_PIN, INPUT);
+    Serial.println("MAX9814 ready");
+
+    memset(hr_buffer,    0, sizeof(hr_buffer));
+    memset(imu_buffer,   0, sizeof(imu_buffer));
+    memset(audio_buffer, 0, sizeof(audio_buffer));
+
+    lastSend_ms = millis();
+    lastHRStore = millis();
+    lastIMU_ms  = millis();
+
+    Serial.println("Waiting for 10s data window...");
 }
 
-// =============================================================
-// MAIN LOOP
-// =============================================================
+// ══════════════════════════════════════════════
 void loop() {
-  unsigned long now = millis();
+    readHR();
 
-  // ── MAX30102: continuous beat detection ──────────────────
-  // Skipped entirely if sensor wasn't found at boot.
-  if (max30102Present) {
+    if (millis() - lastIMU_ms >= 20) {
+        lastIMU_ms = millis();
+        readIMU();
+    }
+
+    if (millis() - lastHRStore >= 1000) {
+        lastHRStore = millis();
+        hr_buffer[hr_index % 10] = (float)beatAvg;
+        hr_index++;
+    }
+
+    if (millis() - lastSend_ms >= 10000 && hr_index >= 10) {
+        lastSend_ms = millis();
+
+        updateSpO2();    // ~1 s blocking
+        captureAudio();  // ~1 s blocking
+
+        // ── Serial analysis report (retained from original) ──
+        printAnalysis();
+
+        // ── WiFi POST to backend ─────────────────────────────
+        reconnectWiFi();
+        sendPayloadChunked();
+    }
+}
+
+// ══════════════════════════════════════════════
+void readHR() {
     long irValue = particleSensor.getIR();
-    fingerDetected = (irValue > 50000);
+    if (checkForBeat(irValue)) {
+        long delta = millis() - lastBeat;
+        lastBeat = millis();
+        beatsPerMinute = 60.0 / (delta / 1000.0);
+        beatsPerMinute += 90;   // calibration offset — preserved from original
 
-    if (fingerDetected && checkForBeat(irValue)) {
-      long delta = now - lastBeat;
-      lastBeat = now;
-      if (delta > 250 && delta < 2000) {
-        currentIBI    = (float)delta;
-        beatsPerMinute = 60.0f / (delta / 1000.0f);
-        rates[rateSpot++] = (byte)beatsPerMinute;
-        rateSpot %= RATE_SIZE;
-        beatAvg = 0;
-        for (byte x = 0; x < RATE_SIZE; x++) beatAvg += rates[x];
-        beatAvg /= RATE_SIZE;
-      }
+        if (beatsPerMinute > 20 && beatsPerMinute < 255) {
+            rates[rateSpot++] = (byte)beatsPerMinute;
+            rateSpot %= RATE_SIZE;
+
+            beatAvg = 0;
+            for (byte x = 0; x < RATE_SIZE; x++) beatAvg += rates[x];
+            beatAvg /= RATE_SIZE;
+        }
     }
-  }
-
-  // ── IMU: 50Hz timed sampling ─────────────────────────────
-  if (now - lastSampleTime >= SAMPLE_INTERVAL_MS) {
-    lastSampleTime = now;
-
-    xyzFloat acc = myMPU6500.getGValues();
-    xyzFloat gyr = myMPU6500.getGyrValues();
-
-    imuBatch[batchIndex].ax = acc.x;
-    imuBatch[batchIndex].ay = acc.y;
-    imuBatch[batchIndex].az = acc.z;
-    imuBatch[batchIndex].gx = gyr.x;
-    imuBatch[batchIndex].gy = gyr.y;
-    imuBatch[batchIndex].gz = gyr.z;
-
-    lastAx = acc.x; lastAy = acc.y; lastAz = acc.z;
-    lastGx = gyr.x; lastGy = gyr.y; lastGz = gyr.z;
-
-    batchIndex++;
-
-    if (batchIndex >= BATCH_SIZE) {
-      // ── Microphone: 50ms blocking window ─────────────────
-      // Taken once per batch, identical to the original sensor
-      // test sketch. A tight 50ms window prevents ADC noise
-      // from accumulating into false scream detections.
-      int sigMax = 0, sigMin = 4095;
-      unsigned long micStart = millis();
-      while (millis() - micStart < 50) {
-        int s = analogRead(MIC_PIN);
-        if (s > sigMax) sigMax = s;
-        if (s < sigMin) sigMin = s;
-      }
-      peakToPeak = sigMax - sigMin;
-
-      checkLocalAlerts();
-      reconnectWiFi();
-      sendBatch();
-      batchIndex = 0;
-    }
-  }
 }
 
-// =============================================================
-// WIFI RECONNECT
-// Non-blocking timeout: waits up to 10s, then gives up and retries
-// on the next batch (200ms later). Does not freeze the device.
-// =============================================================
+// ══════════════════════════════════════════════
+void readIMU() {
+    int16_t ax, ay, az, gx, gy, gz;
+    mpu.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
+
+    int idx = imu_index % 200;
+    imu_buffer[idx][0] = ax / ACCEL_SCALE;
+    imu_buffer[idx][1] = ay / ACCEL_SCALE;
+    imu_buffer[idx][2] = az / ACCEL_SCALE;
+    imu_buffer[idx][3] = gx / GYRO_SCALE;
+    imu_buffer[idx][4] = gy / GYRO_SCALE;
+    imu_buffer[idx][5] = gz / GYRO_SCALE;
+    imu_index++;
+}
+
+// ══════════════════════════════════════════════
+void updateSpO2() {
+    particleSensor.clearFIFO();
+
+    for (byte i = 0; i < 100; i++) {
+        while (!particleSensor.available())
+            particleSensor.check();
+
+        redBuffer[i] = particleSensor.getRed();
+        irBuffer[i]  = particleSensor.getIR();
+        particleSensor.nextSample();
+    }
+
+    maxim_heart_rate_and_oxygen_saturation(
+        irBuffer, 100, redBuffer,
+        &spo2_calc, &validSPO2,
+        &heartRate_spo2, &validHeartRate_spo2
+    );
+
+    if (validSPO2 && spo2_calc >= 70 && spo2_calc <= 100) {
+        spo2_value = (int)spo2_calc;
+    }
+}
+
+// ══════════════════════════════════════════════
+void captureAudio() {
+    long dcSum = 0;
+    for (int i = 0; i < 64; i++) dcSum += analogRead(MIC_PIN);
+    int dc = (int)(dcSum / 64);
+
+    for (int i = 0; i < 15360; i++) {
+        int raw = (analogRead(MIC_PIN) + analogRead(MIC_PIN) +
+                   analogRead(MIC_PIN) + analogRead(MIC_PIN)) >> 2;
+        int centered = raw - dc;
+
+        if (centered >  2047) centered =  2047;
+        if (centered < -2048) centered = -2048;
+
+        audio_buffer[i] = (int16_t)(centered * 16);
+        delayMicroseconds(SAMPLE_DELAY_US);
+    }
+}
+
+// ══════════════════════════════════════════════
+// ─── Analysis helpers ─────────────────────────
+
+float getAvgHR() {
+    float sum = 0;
+    int count = 0;
+    for (int i = 0; i < 10; i++) {
+        if (hr_buffer[i] > 0) { sum += hr_buffer[i]; count++; }
+    }
+    return count > 0 ? sum / count : 0;
+}
+
+float getPeakAccelG() {
+    float peak = 0;
+    for (int i = 0; i < 200; i++) {
+        float mag = sqrt(
+            imu_buffer[i][0] * imu_buffer[i][0] +
+            imu_buffer[i][1] * imu_buffer[i][1] +
+            imu_buffer[i][2] * imu_buffer[i][2]
+        );
+        if (mag > peak) peak = mag;
+    }
+    return peak;
+}
+
+float getPeakGyroMag() {
+    float peak = 0;
+    for (int i = 0; i < 200; i++) {
+        float mag = sqrt(
+            imu_buffer[i][3] * imu_buffer[i][3] +
+            imu_buffer[i][4] * imu_buffer[i][4] +
+            imu_buffer[i][5] * imu_buffer[i][5]
+        );
+        if (mag > peak) peak = mag;
+    }
+    return peak;
+}
+
+float getAudioRMS() {
+    double sumSq = 0;
+    for (int i = 0; i < 15360; i++) {
+        float s = audio_buffer[i] / 32768.0;
+        sumSq += s * s;
+    }
+    return sqrt(sumSq / 15360.0);
+}
+
+// ══════════════════════════════════════════════
+// printAnalysis — Serial report, called each window
+// ══════════════════════════════════════════════
+void printAnalysis() {
+    float avgHR     = getAvgHR();
+    float peakAccel = getPeakAccelG();
+    float peakGyro  = getPeakGyroMag();
+    float audioRMS  = getAudioRMS();
+
+    bool hrAlarm    = false;
+    bool spo2Alarm  = false;
+    bool fallAlarm  = false;
+    bool audioAlarm = false;
+
+    Serial.println("---BEGIN_ANALYSIS---");
+    Serial.println();
+    Serial.println("==== SENSOR ANALYSIS REPORT ====");
+    Serial.println();
+
+    // ── Heart Rate ──────────────────────────────
+    Serial.print("[ HEART RATE ]  Avg: ");
+    Serial.print(avgHR, 1);
+    Serial.println(" BPM");
+
+    if (avgHR == 0) {
+        Serial.println("  Status : NO DATA  – sensor not detected or no beats found.");
+        hrAlarm = true;
+    } else if (avgHR < 50) {
+        Serial.println("  Status : WARNING  – Bradycardia (< 50 BPM). Abnormally low heart rate.");
+        hrAlarm = true;
+    } else if (avgHR <= 100) {
+        Serial.println("  Status : NORMAL   – Within healthy resting range (50–100 BPM).");
+    } else if (avgHR <= 150) {
+        Serial.println("  Status : ELEVATED – Tachycardia or high physical activity (100–150 BPM).");
+        hrAlarm = true;
+    } else {
+        Serial.println("  Status : CRITICAL – Severe tachycardia (> 150 BPM). Medical attention advised.");
+        hrAlarm = true;
+    }
+    Serial.println();
+
+    // ── SpO2 ────────────────────────────────────
+    Serial.print("[ SPO2 ]        Value: ");
+    Serial.print(spo2_value);
+    Serial.println(" %");
+
+    if (spo2_value >= 95) {
+        Serial.println("  Status : NORMAL   – Healthy oxygen saturation (>= 95%).");
+    } else if (spo2_value >= 90) {
+        Serial.println("  Status : WARNING  – Mild hypoxia (90–94%). Monitor closely.");
+        spo2Alarm = true;
+    } else {
+        Serial.println("  Status : CRITICAL – Severe hypoxia (< 90%). Immediate attention required.");
+        spo2Alarm = true;
+    }
+    Serial.println();
+
+    // ── Motion / Fall Detection ──────────────────
+    Serial.print("[ MOTION ]      Peak accel: ");
+    Serial.print(peakAccel, 2);
+    Serial.print(" g  |  Peak gyro: ");
+    Serial.print(peakGyro, 1);
+    Serial.println(" deg/s");
+
+    if (peakAccel > 3.0 && peakGyro > 300.0) {
+        Serial.println("  Status : FALL DETECTED – High acceleration + rotation spike detected.");
+        Serial.print  ("           Accel threshold: > 3.0 g  (measured: "); Serial.print(peakAccel, 2); Serial.println(" g)");
+        Serial.print  ("           Gyro  threshold: > 300 deg/s (measured: "); Serial.print(peakGyro, 1); Serial.println(" deg/s)");
+        fallAlarm = true;
+    } else if (peakAccel > 2.0) {
+        Serial.println("  Status : ELEVATED MOTION – Brisk movement or minor impact. No fall confirmed.");
+    } else {
+        Serial.println("  Status : CALM       – Normal movement range (< 2 g peak).");
+    }
+    Serial.println();
+
+    // ── Audio ────────────────────────────────────
+    Serial.print("[ AUDIO ]       RMS level: ");
+    Serial.println(audioRMS, 4);
+
+    if (audioRMS > 0.15) {
+        Serial.println("  Status : LOUD EVENT – Sustained high-amplitude sound detected.");
+        Serial.println("           Possible screaming or distress audio. Threshold: RMS > 0.15");
+        audioAlarm = true;
+    } else if (audioRMS > 0.05) {
+        Serial.println("  Status : MODERATE   – Normal ambient / conversational audio level.");
+    } else {
+        Serial.println("  Status : QUIET      – Low ambient noise. No distress audio detected.");
+    }
+    Serial.println();
+
+    // ── Overall Verdict ──────────────────────────
+    Serial.println("================================");
+    bool unsafe = hrAlarm || spo2Alarm || fallAlarm || audioAlarm;
+
+    if (unsafe) {
+        Serial.println(">> OVERALL STATUS : *** UNSAFE ***");
+        Serial.println();
+        Serial.println("   Triggered flags:");
+        if (hrAlarm)    Serial.println("   [!] Heart rate out of safe range");
+        if (spo2Alarm)  Serial.println("   [!] Low blood oxygen (SpO2)");
+        if (fallAlarm)  Serial.println("   [!] Fall / violent motion detected");
+        if (audioAlarm) Serial.println("   [!] Distress audio detected");
+        Serial.println();
+        Serial.println("   Action: Alert contacts / emergency services.");
+    } else {
+        Serial.println(">> OVERALL STATUS :    SAFE");
+        Serial.println();
+        Serial.println("   All parameters within normal limits.");
+        Serial.println("   HR normal | SpO2 normal | No fall | No distress audio.");
+    }
+
+    Serial.println("================================");
+    Serial.println("---END_ANALYSIS---");
+}
+
+// ══════════════════════════════════════════════
+// WiFi reconnect — non-blocking 10 s timeout
+// ══════════════════════════════════════════════
 void reconnectWiFi() {
-  if (WiFi.status() == WL_CONNECTED) return;
+    if (WiFi.status() == WL_CONNECTED) return;
 
-  Serial.print("WiFi lost — reconnecting");
-  WiFi.disconnect();
-  WiFi.begin(WIFI_SSID, WIFI_PASS);
+    Serial.print("WiFi lost — reconnecting");
+    WiFi.disconnect();
+    WiFi.begin(WIFI_SSID, WIFI_PASS);
 
-  unsigned long start = millis();
-  while (WiFi.status() != WL_CONNECTED && millis() - start < 10000) {
-    delay(500);
-    Serial.print(".");
-  }
+    unsigned long start = millis();
+    while (WiFi.status() != WL_CONNECTED && millis() - start < 10000UL) {
+        delay(500);
+        Serial.print(".");
+    }
 
-  if (WiFi.status() == WL_CONNECTED) {
-    Serial.println("\nReconnected.");
-  } else {
-    Serial.println("\nReconnect failed — will retry next batch.");
-  }
+    if (WiFi.status() == WL_CONNECTED)
+        Serial.println("\nReconnected.");
+    else
+        Serial.println("\nReconnect failed — will retry next window.");
 }
 
-// =============================================================
-// SEND BATCH
-// JSON payload matches backend schema exactly:
-// { userId: str, hr: float, ibi: float, imu: [{ax,ay,az,gx,gy,gz}×10] }
-// Timestamp is NOT sent — backend adds it on receipt (time.time()).
-// hr/ibi are sent as 0.0 when no finger is detected.
-// =============================================================
-void sendBatch() {
-  if (WiFi.status() != WL_CONNECTED) {
-    Serial.println("Skipping POST — no WiFi.");
-    return;
-  }
-
-  HTTPClient http;
-  http.begin(BACKEND_URL);
-  http.addHeader("Content-Type", "application/json");
-  http.addHeader("X-API-Key", API_KEY);
-
-  // Size estimate: 10 samples × (6 floats × ~8 chars + 6 keys × ~4 chars) 
-  // = 10 × ~72 = ~720 bytes + outer fields + JSON structure ≈ ~900 bytes.
-  // Using 2048 for safe headroom — fits comfortably in ESP32-S3 SRAM.
-  // If you increase BATCH_SIZE beyond 20, bump this to 4096.
-  StaticJsonDocument<2048> doc;
-
-  doc["userId"] = USER_ID;
-  // Send 0.0 if no finger on sensor. Backend schema declares hr/ibi as float;
-  // Pydantic will accept this cleanly.
-  doc["hr"]  = fingerDetected ? (float)beatAvg : 0.0f;
-  doc["ibi"] = fingerDetected ? currentIBI     : 0.0f;
-
-  JsonArray imuArray = doc.createNestedArray("imu");
-  for (int i = 0; i < BATCH_SIZE; i++) {
-    JsonObject s = imuArray.createNestedObject();
-    s["ax"] = imuBatch[i].ax;
-    s["ay"] = imuBatch[i].ay;
-    s["az"] = imuBatch[i].az;
-    s["gx"] = imuBatch[i].gx;
-    s["gy"] = imuBatch[i].gy;
-    s["gz"] = imuBatch[i].gz;
-  }
-
-  String jsonString;
-  serializeJson(doc, jsonString);
-
-  int httpCode = http.POST(jsonString);
-  if (httpCode > 0) {
-    Serial.printf("[POST] HTTP %d\n", httpCode);
-  } else {
-    Serial.printf("[POST] Error: %s\n", http.errorToString(httpCode).c_str());
-  }
-  http.end();
+// ══════════════════════════════════════════════
+// Chunked HTTP helpers
+// ══════════════════════════════════════════════
+static void flushChunk() {
+    if (!g_client || chunkLen == 0) return;
+    g_client->printf("%X\r\n", chunkLen);
+    g_client->write((const uint8_t*)chunkBuf, chunkLen);
+    g_client->print("\r\n");
+    chunkLen = 0;
 }
 
-// =============================================================
-// LOCAL EMERGENCY DETECTION
-// Logic mirrors the original sensor test sketch exactly:
-// all four sound levels + all motion states + combined trigger.
-// =============================================================
-void checkLocalAlerts() {
-  float totalAccel = sqrt(lastAx*lastAx + lastAy*lastAy + lastAz*lastAz);
-  float totalGyro  = sqrt(lastGx*lastGx + lastGy*lastGy + lastGz*lastGz);
+static inline void emitChar(char c) {
+    chunkBuf[chunkLen++] = c;
+    if (chunkLen == CHUNK_BUF_SIZE) flushChunk();
+}
 
-  // ── Motion status ─────────────────────────────────────────
-  if (totalAccel > 0.8 && totalAccel < IMPACT_THRESHOLD && totalGyro < SHAKE_THRESHOLD) {
-    Serial.println("STATUS: Normal movement");
-  }
-  if (totalAccel < FALL_THRESHOLD) {
-    Serial.println("[WARNING] Possible free fall!");
-  }
-  if (totalAccel > IMPACT_THRESHOLD) {
-    Serial.println("[DANGER] Strong impact detected!");
-  }
-  if (totalGyro > SHAKE_THRESHOLD) {
-    Serial.println("[ALERT] Rapid body/hand movement!");
-  }
+static void emitStr(const char* s) {
+    while (*s) emitChar(*s++);
+}
 
-  // ── Sound status ──────────────────────────────────────────
-  if (peakToPeak < NORMAL_SOUND) {
-    Serial.println("SOUND: Quiet environment");
-  } else if (peakToPeak < LOUD_SOUND) {
-    Serial.println("SOUND: Normal talking");
-  } else if (peakToPeak < SCREAM_SOUND) {
-    Serial.println("[WARNING] Loud noise detected!");
-  } else {
-    Serial.println("[ALERT] Possible scream detected!");
-  }
+static void emitFloat(float v, int decimals) {
+    char tmp[32];
+    dtostrf(v, 1, decimals, tmp);
+    emitStr(tmp);
+}
 
-  // ── Combined emergency ────────────────────────────────────
-  if ((totalAccel > IMPACT_THRESHOLD && totalGyro > SHAKE_THRESHOLD) ||
-      (peakToPeak > SCREAM_SOUND     && totalGyro > SHAKE_THRESHOLD)) {
-    Serial.println("####################################");
-    Serial.println(" EMERGENCY: Possible attack/distress");
-    Serial.println("####################################");
-  }
+// ══════════════════════════════════════════════
+// sendPayloadChunked — HTTP/1.1 chunked POST
+//
+// WHY CHUNKED?
+//   Audio alone is 15 360 floats × ~8 chars ≈ 123 KB of text.
+//   Total payload ≈ 135–140 KB. Allocating that as a String or
+//   StaticJsonDocument would exhaust the ESP32-S3 heap and crash.
+//   Chunked transfer streams the body in CHUNK_BUF_SIZE pieces,
+//   keeping heap usage constant regardless of payload size.
+//
+// BACKEND NOTE:
+//   Your server must accept Transfer-Encoding: chunked (all
+//   HTTP/1.1 servers do — FastAPI/uvicorn, Flask, Node, etc.).
+//   The JSON schema sent is identical to the original printPayload:
+//     { "hr_bpm":[...], "spo2":NNN, "imu":[[...]], 
+//       "audio_pcm":[...], "device_id":"assn_001" }
+// ══════════════════════════════════════════════
+void sendPayloadChunked() {
+    if (WiFi.status() != WL_CONNECTED) {
+        Serial.println("[POST] Skipping — no WiFi.");
+        return;
+    }
+
+    // ── Parse host, port, path from BACKEND_URL ───────────────
+    // Expects: "http://host[:port]/path"
+    String url        = String(BACKEND_URL);
+    int    schemeEnd  = url.indexOf("://");
+    String hostAndPath = (schemeEnd >= 0) ? url.substring(schemeEnd + 3) : url;
+    int    slashPos   = hostAndPath.indexOf('/');
+    String host       = (slashPos >= 0) ? hostAndPath.substring(0, slashPos) : hostAndPath;
+    String path       = (slashPos >= 0) ? hostAndPath.substring(slashPos)    : String("/");
+
+    int port     = 80;
+    int colonPos = host.indexOf(':');
+    if (colonPos >= 0) {
+        port = host.substring(colonPos + 1).toInt();
+        host = host.substring(0, colonPos);
+    }
+
+    // ── Open TCP connection ────────────────────────────────────
+    WiFiClient client;
+    if (!client.connect(host.c_str(), port)) {
+        Serial.printf("[POST] Connection failed to %s:%d\n", host.c_str(), port);
+        return;
+    }
+
+    // ── HTTP request headers ───────────────────────────────────
+    client.printf("POST %s HTTP/1.1\r\n",           path.c_str());
+    client.printf("Host: %s\r\n",                   host.c_str());
+    client.printf("Content-Type: application/json\r\n");
+    client.printf("X-API-Key: %s\r\n",              API_KEY);
+    client.printf("Transfer-Encoding: chunked\r\n");
+    client.printf("Connection: close\r\n");
+    client.printf("\r\n");
+
+    // ── Stream JSON body ───────────────────────────────────────
+    g_client = &client;
+    chunkLen  = 0;
+
+    // hr_bpm
+    emitStr("{\"hr_bpm\":[");
+    for (int i = 0; i < 10; i++) {
+        emitFloat(hr_buffer[i], 1);
+        if (i < 9) emitChar(',');
+    }
+
+    // spo2
+    emitStr("],\"spo2\":");
+    {
+        char tmp[8];
+        itoa(spo2_value, tmp, 10);
+        emitStr(tmp);
+    }
+
+    // imu — chronological replay from circular buffer
+    emitStr(",\"imu\":[");
+    for (int i = 0; i < 200; i++) {
+        int idx = (imu_index - 200 + i + 200) % 200;
+        emitChar('[');
+        for (int j = 0; j < 6; j++) {
+            emitFloat(imu_buffer[idx][j], 3);
+            if (j < 5) emitChar(',');
+        }
+        emitChar(']');
+        if (i < 199) emitChar(',');
+    }
+
+    // audio_pcm + device_id
+    emitStr("],\"audio_pcm\":[");
+    for (int i = 0; i < 15360; i++) {
+        emitFloat(audio_buffer[i] / 32768.0f, 4);
+        if (i < 15359) emitChar(',');
+    }
+    emitStr("],\"device_id\":\"assn_001\"}");
+
+    // Flush remainder + HTTP terminal zero-chunk
+    flushChunk();
+    client.print("0\r\n\r\n");
+
+    // ── Read server response ───────────────────────────────────
+    unsigned long timeout = millis();
+    while (client.connected() && !client.available()) {
+        if (millis() - timeout > 5000UL) {
+            Serial.println("[POST] Timeout waiting for response.");
+            client.stop();
+            g_client = nullptr;
+            return;
+        }
+    }
+
+    if (client.available()) {
+        String statusLine = client.readStringUntil('\n');
+        Serial.printf("[POST] %s\n", statusLine.c_str());
+    }
+
+    client.stop();
+    g_client = nullptr;
+    Serial.println("[POST] Done.");
 }

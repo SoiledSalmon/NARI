@@ -9,7 +9,7 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Modal,
+  Alert,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
@@ -17,8 +17,9 @@ import { AuthStackParamList } from '../../navigation/routes';
 import { ROUTES } from '../../navigation/routes';
 import { Button } from '../../components/ui/Button';
 import { useAuthStore } from '../../stores/authStore';
-import { firebaseConfig, app } from '../../services/firebaseService';
+import { firebaseConfig, app, isFirebaseConfigured } from '../../services/firebaseService';
 import { FirebaseRecaptchaVerifierModal } from 'expo-firebase-recaptcha';
+const RecaptchaModal = FirebaseRecaptchaVerifierModal as any;
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { spacing, radii } from '../../theme/spacing';
@@ -39,11 +40,35 @@ export default function SignUpScreen({ navigation }: Props) {
   const isSignIn = mode === 'signin';
 
   const handleSubmit = async () => {
-    if (!phone || phone.replace(/\s/g, '').length < 13 || !recaptchaVerifier.current) return;
+    const cleanPhone = phone.replace(/\s/g, '');
+    if (!phone || cleanPhone.length < 13) return;
+
+    if (isFirebaseConfigured && !recaptchaVerifier.current) {
+      Alert.alert(
+        t('common.error'),
+        'reCAPTCHA verifier not initialized. Please try again.'
+      );
+      return;
+    }
 
     setShowRecaptchaLoading(true);
-    const cleanPhone = phone.replace(/\s/g, '');
-    const success = await sendOTP(cleanPhone, recaptchaVerifier.current as any);
+
+    let timeoutId: any = null;
+    if (isFirebaseConfigured) {
+      timeoutId = setTimeout(() => {
+        setShowRecaptchaLoading(false);
+        Alert.alert(
+          t('common.error'),
+          'Verification timed out. Please check your network and try again.'
+        );
+      }, 15000);
+    }
+
+    const success = await sendOTP(cleanPhone, recaptchaVerifier.current as any, name);
+    
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
     setShowRecaptchaLoading(false);
 
     if (success) {
@@ -59,6 +84,11 @@ export default function SignUpScreen({ navigation }: Props) {
         });
       }
       navigation.navigate(ROUTES.AUTH.OTP, { phone: cleanPhone });
+    } else {
+      Alert.alert(
+        t('common.error'),
+        t('signup.sendOtpError')
+      );
     }
   };
 
@@ -78,28 +108,15 @@ export default function SignUpScreen({ navigation }: Props) {
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
-        <FirebaseRecaptchaVerifierModal
-          ref={recaptchaVerifier}
-          // @ts-ignore
-          firebaseConfig={app ? app.options : firebaseConfig}
-        />
-
-        {/* reCAPTCHA loading interstitial */}
-        <Modal
-          visible={showRecaptchaLoading}
-          transparent
-          animationType="fade"
-          statusBarTranslucent
-        >
-          <View style={styles.recaptchaOverlay}>
-            <View style={styles.recaptchaCard}>
-              <ActivityIndicator size="large" color={colors.brand.primary} />
-              <Text style={styles.recaptchaText}>
-                {t('signup.recaptchaLoading')}
-              </Text>
-            </View>
-          </View>
-        </Modal>
+        {isFirebaseConfigured && (
+          <RecaptchaModal
+            ref={recaptchaVerifier}
+            title={t('common.appName')}
+            cancelLabel={t('common.cancel')}
+            attemptInvisibleVerification={true}
+            firebaseConfig={app ? app.options : firebaseConfig}
+          />
+        )}
 
         <Text style={styles.logo}>NARI</Text>
         <Text style={styles.title}>
@@ -171,6 +188,28 @@ export default function SignUpScreen({ navigation }: Props) {
           </Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {/* reCAPTCHA loading interstitial */}
+      {showRecaptchaLoading && (
+        <View style={styles.recaptchaOverlay}>
+          <View style={styles.recaptchaCard}>
+            <ActivityIndicator size="large" color={colors.brand.primary} />
+            <Text style={styles.recaptchaText}>
+              {t('signup.recaptchaLoading')}
+            </Text>
+            {isFirebaseConfigured && (
+              <TouchableOpacity
+                style={styles.recaptchaCancelButton}
+                onPress={() => setShowRecaptchaLoading(false)}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel verification"
+              >
+                <Text style={styles.recaptchaCancelText}>{t('common.cancel')}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      )}
     </KeyboardAvoidingView>
   );
 }
@@ -241,10 +280,11 @@ const styles = StyleSheet.create({
     color: colors.brand.primary,
   },
   recaptchaOverlay: {
-    flex: 1,
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: colors.overlay.black50,
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 999,
   },
   recaptchaCard: {
     backgroundColor: colors.neutral[0],
@@ -257,5 +297,15 @@ const styles = StyleSheet.create({
   recaptchaText: {
     ...typography.bodyMedium,
     color: colors.neutral[700],
+  },
+  recaptchaCancelButton: {
+    marginTop: spacing.md,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+  },
+  recaptchaCancelText: {
+    ...typography.bodySmallMedium,
+    color: colors.neutral[500],
+    textDecorationLine: 'underline',
   },
 });

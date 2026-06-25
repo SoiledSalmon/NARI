@@ -31,7 +31,7 @@ interface AuthState {
   logout: () => void;
 
   /** Send OTP to phone via Firebase Auth. Requires recaptcha verifier. */
-  sendOTP: (phone: string, applicationVerifier: ApplicationVerifier) => Promise<boolean>;
+  sendOTP: (phone: string, applicationVerifier?: ApplicationVerifier, name?: string) => Promise<boolean>;
   
   /** Verify OTP code and obtain Firebase ID token */
   verifyOTP: (code: string) => Promise<boolean>;
@@ -75,9 +75,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     });
   },
 
-  sendOTP: async (phone: string, applicationVerifier: ApplicationVerifier) => {
+  sendOTP: async (phone: string, applicationVerifier?: ApplicationVerifier, name?: string) => {
     set({ isLoading: true });
-    const success = await firebaseService.sendOTP(phone, applicationVerifier);
+    const success = await firebaseService.sendOTP(phone, applicationVerifier, name);
     set({ isLoading: false });
     return success;
   },
